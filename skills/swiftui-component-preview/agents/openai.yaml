@@ -1,0 +1,4 @@
+interface:
+  display_name: "SwiftUI Component Preview"
+  short_description: "Render SwiftUI fixtures or build interactive windows"
+  default_prompt: "Use $swiftui-component-preview to render this SwiftUI component in light and dark mode and show it in the right panel."
