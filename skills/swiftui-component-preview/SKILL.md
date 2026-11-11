@@ -4,7 +4,7 @@ description: Use when the user wants to see, preview, render, or screenshot a Sw
 argument-hint: "[png|gallery|live] <component>"
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # SwiftUI Component Preview
