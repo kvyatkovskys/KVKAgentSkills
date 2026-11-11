@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Package completed renderer PNGs as an offline, self-contained gallery."""
+"""Package completed renderer PNGs as an offline, self-contained gallery.
+
+When `cwebp` is installed, each PNG is embedded as lossless WebP if that is smaller.
+Set PREVIEW_GALLERY_WEBP=0 to always embed the PNGs.
+"""
 import base64
 import hashlib
 from html import escape
@@ -7,6 +11,8 @@ import json
 import os
 import signal
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -46,22 +52,41 @@ def stop(signum, _frame):
     raise SystemExit(128 + signum)
 
 
+def payload(png, cwebp):
+    """Return (media type, bytes) for one render: lossless WebP when smaller, else the PNG."""
+    data = png.read_bytes()
+    if cwebp:
+        webp = png.with_suffix(".webp")
+        try:
+            subprocess.run([cwebp, "-quiet", "-lossless", "-exact", str(png), "-o", str(webp)],
+                           check=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, timeout=120)
+            compressed = webp.read_bytes()
+        except (OSError, subprocess.SubprocessError):
+            compressed = b""
+        # Trust the encoder only for a well-formed, smaller file; otherwise keep the PNG.
+        if compressed[:4] == b"RIFF" and compressed[8:12] == b"WEBP" and len(compressed) < len(data):
+            return "image/webp", compressed
+    return "image/png", data
+
+
 def main():
     for signum in (signal.SIGINT, signal.SIGHUP, signal.SIGTERM):
         signal.signal(signum, stop)
     directory, destination, width, height, locale, title, fixture = sys.argv[1:]
     width, height = int(width), int(height)
+    cwebp = None if os.environ.get("PREVIEW_GALLERY_WEBP") == "0" else shutil.which("cwebp")
     variants = {}
     for theme in ("light", "dark"):
         for frame in ("raw", "framed"):
-            data = (Path(directory) / f"{theme}-{frame}.png").read_bytes()
+            media_type, data = payload(Path(directory) / f"{theme}-{frame}.png", cwebp)
             variants[f"{theme}-{frame}"] = {
-                "src": "data:image/png;base64," + base64.b64encode(data).decode("ascii"),
+                "src": f"data:{media_type};base64," + base64.b64encode(data).decode("ascii"),
                 "width": width + (48 if frame == "framed" else 0),
                 "height": height + (88 if frame == "framed" else 0),
             }
     initial = variants["light-framed"]
-    # Keep the initial PNG in the image for no-JS viewing, and embed each payload once.
+    # Keep the initial render in the image for no-JS viewing, and embed each payload once.
     variant_data = {
         name: {key: value for key, value in variant.items() if name != "light-framed" or key != "src"}
         for name, variant in variants.items()

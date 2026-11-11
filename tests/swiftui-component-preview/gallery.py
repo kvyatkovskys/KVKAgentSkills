@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import struct
 import subprocess
 import tempfile
@@ -25,7 +26,8 @@ class GalleryTests(unittest.TestCase):
             fixture = work / "Fixture.swift"
             fixture.write_bytes((SKILL / "assets/ExampleFixture.swift").read_bytes())
             output = work / "gallery 'quoted'.html"
-            environment = dict(os.environ, TMPDIR=str(temporary))
+            # The main run embeds PNGs so the assertions do not depend on an installed cwebp.
+            environment = dict(os.environ, TMPDIR=str(temporary), PREVIEW_GALLERY_WEBP="0")
 
             def run(*arguments, success=False):
                 result = subprocess.run(
@@ -56,6 +58,8 @@ class GalleryTests(unittest.TestCase):
                 self.assertEqual(dimensions, (528, 408) if frame == "framed" else (480, 320))
                 hashes[theme, frame] = hashlib.sha256(png).hexdigest()
             self.assertNotEqual(hashes["light", "raw"], hashes["dark", "raw"])
+            self.check_webp(root, fixture, {
+                name: base64.b64decode(variant["src"].split(",", 1)[1]) for name, variant in variants.items()})
             original = output.read_bytes()
             for width in ("0", "-1", "nan", "4097", "999999999999999999"):
                 run(fixture, output, width, 320, "en_US")
@@ -81,6 +85,58 @@ class GalleryTests(unittest.TestCase):
             run(runtime_failure, output, 480, 320, "en_US")
             self.assertEqual(output.read_bytes(), original)
             self.assertEqual(list(work.glob(".swiftui-gallery-*")), [])
+
+    def check_webp(self, root, fixture, pngs):
+        """Repackage the rendered PNGs with stand-in encoders, then with cwebp if installed."""
+        renders = root / "renders"
+        renders.mkdir()
+        tools = root / "tools"
+        tools.mkdir()
+        encoder = tools / "cwebp"
+        output = root / "repackaged.html"
+
+        def package(script=None, **extra):
+            for name, png in pngs.items():
+                (renders / f"{name}.png").write_bytes(png)
+            for stale in renders.glob("*.webp"):
+                stale.unlink()
+            environment = dict(os.environ, **extra)
+            environment.pop("PREVIEW_GALLERY_WEBP", None)
+            environment.update(extra)
+            if script is not None:
+                encoder.write_text("#!/bin/bash\n" + script + "\n")
+                encoder.chmod(0o755)
+                environment["PATH"] = f"{tools}:/usr/bin:/bin"
+            subprocess.run(
+                ["python3", str(SKILL / "scripts/gallery_html.py"), renders, output, "480", "320", "en_US", "Title", fixture],
+                env=environment, check=True, stdout=subprocess.DEVNULL)
+            page = output.read_text()
+            sources = re.findall(r'data:image/(png|webp);base64,([A-Za-z0-9+/=]+)', page)
+            self.assertEqual(len(sources), 4)
+            self.assertIn("img-src data:", page)
+            return [(kind, base64.b64decode(data, validate=True)) for kind, data in sources]
+
+        # A smaller, well-formed result replaces the PNG; the last argument is the output path.
+        small = package("printf 'RIFF\\004\\000\\000\\000WEBP' > \"${@: -1}\"")
+        self.assertEqual([kind for kind, _ in small], ["webp"] * 4)
+        self.assertTrue(all(data == b"RIFF\x04\x00\x00\x00WEBP" for _, data in small))
+        # Encoder failures, malformed output, larger output and the opt-out all keep the PNGs.
+        for script, extra in (
+            ("exit 1", {}),
+            ("printf 'not a webp file' > \"${@: -1}\"", {}),
+            ("{ printf 'RIFF\\004\\000\\000\\000WEBP'; head -c 4000000 /dev/zero; } > \"${@: -1}\"", {}),
+            ("printf 'RIFF\\004\\000\\000\\000WEBP' > \"${@: -1}\"", {"PREVIEW_GALLERY_WEBP": "0"}),
+        ):
+            kept = package(script, **extra)
+            self.assertEqual([kind for kind, _ in kept], ["png"] * 4, script)
+            self.assertEqual(sorted(data for _, data in kept), sorted(pngs.values()), script)
+        if shutil.which("cwebp"):
+            for kind, data in package():
+                if kind == "webp":
+                    # Lossless WebP: a VP8L chunk whose header packs width-1 and height-1 in 14 bits each.
+                    self.assertEqual((data[:4], data[8:16], data[20]), (b"RIFF", b"WEBPVP8L", 0x2F))
+                    bits = struct.unpack("<I", data[21:25])[0]
+                    self.assertIn(((bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1), {(480, 320), (528, 408)})
 
 
 if __name__ == "__main__":

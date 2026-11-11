@@ -16,6 +16,7 @@ Notable changes to the repository and to each skill. A skill's version is the `m
 
 - Claude Code support: agent-neutral instructions, output selection rules (`png`, `gallery`, `live`), detail moved to `references/`.
 - `fit` sizing for PNG renders.
+- Gallery embeds lossless WebP instead of PNG when `cwebp` is installed and the result is smaller; `PREVIEW_GALLERY_WEBP=0` opts out.
 - Live preview: resizable window with a glass control bar, optional separate live fixture, `refresh` to rebuild and reopen in place, richer built-in example.
 - Swift 6 no longer required: Swift 5 language mode is used automatically on older compilers or on request.
 - Fixture validation errors name the offending token and line.
