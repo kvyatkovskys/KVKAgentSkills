@@ -2,11 +2,29 @@
 
 A standalone agent skill for Claude Code, Codex, and other [Agent Skills](https://agentskills.io/specification) runtimes. It discovers a project's SwiftUI sources and has the agent adapt the requested real component into a local fixture. Render macOS-compatible components as PNGs using a detached `NSHostingView`, compare images in an offline HTML gallery, or build an interactive native preview window. PNGs and galleries can be shown in the agent's file, image, or browser panel; the live preview is a separate macOS window. Optional framing in static renders is decorative.
 
-| Light, with the decorative frame | Dark, with the decorative frame |
+## Three outputs
+
+All three are built from the same fixture, so one adaptation of your component serves every mode. The screenshots show the bundled example fixtures.
+
+### PNG render
+
+A static image of the component at a size you choose or one fitted to the component, in light or dark, with an optional decorative window frame. It is the fastest output and the one the agent can look at itself, so it is the default. Use it to check layout, spacing, text, a particular state, or a locale.
+
+| Light, framed | Dark, framed |
 | --- | --- |
 | ![Light PNG render of the bundled example fixture](../../docs/images/swiftui-component-preview/render-light.png) | ![Dark PNG render of the bundled example fixture](../../docs/images/swiftui-component-preview/render-dark.png) |
 
-PNG renders of the bundled `assets/ExampleFixture.swift` at 480 × 320, produced by `scripts/render.sh` exactly as shown under [Try the example](#try-the-example).
+### HTML gallery
+
+One self-contained HTML file with four renders embedded: light and dark, each with and without the frame. The Appearance switch and the Decorative frame checkbox swap the image; nothing is fetched and no server is needed. Use it to compare themes or to hand someone a single file. The component inside the image stays static.
+
+![HTML gallery with an appearance switch and a frame checkbox above the render](../../docs/images/swiftui-component-preview/gallery.png)
+
+### Live window
+
+A real macOS window running the fixture: buttons click, fields take text, navigation pushes screens, sheets and alerts open. A glass bar under the content switches System/Light/Dark and the locale, shows the live viewport size, and resets view state. The window is resizable and the component lays out again at each size. Use it to check behavior and flows. It is a compiled snapshot, not hot reload: after a code change the agent updates the fixture and runs `refresh`, which rebuilds the app, closes the old window and opens the new one.
+
+![Live preview window showing a profile form with a segmented picker, a stepper and the control bar](../../docs/images/swiftui-component-preview/live-window.png)
 
 ## What to ask for
 
