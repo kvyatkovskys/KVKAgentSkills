@@ -1,6 +1,6 @@
 ---
 name: swiftui-component-preview
-description: Discover a project's SwiftUI components, adapt a genuine component fixture, and preview macOS-compatible views as PNGs, an offline HTML gallery, or an interactive native window. Use for component layout, fixture states, and local interaction checks.
+description: Use when the user wants to see, preview, render, or screenshot a SwiftUI view or component without opening Xcode Canvas - checking layout, light/dark appearance, locale, fixture states, or local interaction of a macOS-compatible SwiftUI component. Produces PNG renders, an offline HTML theme gallery, or an interactive native macOS window from a fixture adapted from the project's real component.
 ---
 
 # SwiftUI Component Preview
@@ -9,7 +9,7 @@ Create a component render from a small, deterministic SwiftUI fixture. Requires 
 
 ## First use in a project
 
-Resolve this skill directory from its installed location; no developer-specific paths or settings are needed. Use the user's current project root and run read-only discovery:
+`<skill-directory>` in the commands below is the directory containing this `SKILL.md`; resolve it from the installed location. Claude Code states it as the skill's base directory when the skill loads (`${CLAUDE_SKILL_DIR}`); in Codex and other agents use the path this file was read from. No developer-specific paths or settings are needed. Use the user's current project root and run read-only discovery:
 
 ```bash
 python3 "<skill-directory>/scripts/bootstrap.py" discover --root "<project-root>"
@@ -19,7 +19,7 @@ Discovery reports SwiftPM manifests, Xcode projects/workspaces, SwiftUI sources,
 
 Read the chosen **actual source**, its existing `#Preview` construction, and necessary local definitions before creating a fixture. The skill agent performs this adaptation as part of the first preview request; do not stop at instructions telling the user to adapt it manually when you can do so safely. Keep the component's real view hierarchy, controls, styles, and inputs. Extract its value view and include required local definitions, replacing service dependencies with synthetic values and local actions. Do not substitute a lookalike screen, generic demo, or the bundled example for the requested component. The examples illustrate the fixture API only.
 
-Save the adapted fixture inside the user's project, for example `.swiftui-preview/fixtures/StatusCard.swift`. Never copy project source into the shared installed skill. Include no `@main`, app delegate, production composition root, `#Preview` macro, or production services. Inspect the whole fixture before executing it: executable Swift runs with normal caller permissions; this helper is not a sandbox. Configuration hashes cannot establish visual fidelity or absence of side effects.
+Save the adapted fixture inside the user's project, for example `.swiftui-preview/fixtures/StatusCard.swift`. Never copy project source into the shared installed skill. Include no `@main`, app delegate, production composition root, `#Preview` macro, or production services. `configure` and `run` scan the fixture as text and reject it when `@main`, `#Preview`, or `import UIKit` appears anywhere, comments included; keep those strings out of comments too. The error names the matched token and its line. Inspect the whole fixture before executing it: executable Swift runs with normal caller permissions; this helper is not a sandbox. Configuration hashes cannot establish visual fidelity or absence of side effects.
 
 If explicit UIKit or iOS-only APIs make the component incompatible with macOS, use an available iOS Simulator/Xcode Canvas workflow or report the precise unsupported dependency. The generic macOS host does not run UIKit. If modules, assets, or String Catalogs cannot be safely adapted into the single-file contract, use an available project-specific workflow or state the concrete limitation. Do not silently link the production app, execute its lifecycle, or change its build configuration.
 
@@ -31,7 +31,9 @@ python3 "<skill-directory>/scripts/bootstrap.py" configure --root "<project-root
   --fixture ".swiftui-preview/fixtures/StatusCard.swift" --component StatusCard
 ```
 
-`--project` also accepts a relative `.xcodeproj` or `.xcworkspace` directory; `init` aliases `configure`. The versioned `.swiftui-preview/config.json` stores only relative paths, component name, platform `macos`, and SHA-256 hashes of the selected source and adapted fixture. It relocates with the project and may be committed by the user; perform no Git actions unless requested. Existing configuration is preserved unless explicitly replaced with `configure --replace` after inspection and adaptation. Selected paths and configuration must exist within the root, without symlinks or path traversal.
+`--project` also accepts a relative `.xcodeproj` or `.xcworkspace` directory; `init` aliases `configure`. Add `--live-fixture "<relative path>"` to register a separate stateful fixture for live builds (see [references/live.md](references/live.md)). The versioned `.swiftui-preview/config.json` stores only relative paths, component name, platform `macos`, and SHA-256 hashes of the selected source and adapted fixture. It relocates with the project and may be committed by the user; perform no Git actions unless requested. Existing configuration is preserved unless explicitly replaced with `configure --replace` after inspection and adaptation. Selected paths and configuration must exist within the root, without symlinks or path traversal.
+
+After `configure` succeeds, produce the first preview with `run` as described next. The direct helpers in later sections are for one-off fixtures that have no saved configuration.
 
 ## Subsequent previews
 
@@ -43,7 +45,7 @@ python3 "<skill-directory>/scripts/bootstrap.py" run --root "<project-root>" \
   --width 480 --height 320 --locale en_US --theme light --frame
 ```
 
-Use `--mode gallery` with an `.html` output or `--mode live` with a new `.app` output. `--theme` and `--frame` apply only to render; galleries include all variants and live previews have native controls. The output parent must exist; bootstrap rejects existing outputs rather than replacing them. Relative output paths resolve from the project root. Live builds only; launch and inspect according to the live workflow below.
+Use `--mode gallery` with an `.html` output or `--mode live` with a new `.app` output. `--theme` and `--frame` apply only to render; galleries include all variants and live previews have native controls. The output parent must exist; bootstrap rejects existing outputs rather than replacing them, unlike the direct `render.sh` and `gallery.sh` helpers; to re-render, choose a new filename or remove the old task-owned artifact first. Relative output paths resolve from the project root. Live builds only; launch and inspect according to the live workflow below.
 
 Changed source or fixture hashes stop execution. Reinspect the actual component, refresh the adaptation, then run `configure --replace` with the selected paths. Also inspect changes to supporting definitions/resources: hashes cover the primary source and self-contained fixture, not the entire dependency graph. Switching components follows the first-use adaptation workflow before replacing configuration. Preserve user edits to existing fixtures.
 
@@ -78,50 +80,38 @@ bash "<skill-directory>/scripts/render.sh" \
   480 320 light en_US
 ```
 
-Arguments are fixture, output PNG, content width, content height, appearance (`light` or `dark`), and locale identifier. Width and height are integers from 1 to 4096, rendered at one pixel per point. An existing output file is replaced atomically; choose task-owned paths. Repeat with `dark` and a distinct filename when appearance comparison is useful. The locale sets SwiftUI's environment only; select RTL layout direction explicitly in a fixture if that is part of the test.
+Arguments are fixture, output PNG, content width, content height, appearance (`light` or `dark`), and locale identifier. Width and height are integers from 1 to 4096, rendered at one pixel per point, or `fit`. An existing output file is replaced atomically; choose task-owned paths. Repeat with `dark` and a distinct filename when appearance comparison is useful. The locale sets SwiftUI's environment only; select RTL layout direction explicitly in a fixture if that is part of the test.
+
+**Choosing the viewport.** Size it to the component, not to the example numbers. For a full screen use the target window or device size in points. For a row, card, or control, pass the width of its real container and `fit` for the height, such as `390 fit`; the renderer measures the fixture's ideal size on each fitted axis and prints `render: fitted content size WxH` to stderr. `fit fit` suits intrinsically sized controls, but views built around `Spacer`, `maxWidth: .infinity`, or `ScrollView` collapse to their minimum on a fitted axis, so give those a number. `run --mode render` accepts `--width fit` and `--height fit`; gallery and live need numbers, so reuse the reported size there.
 
 Append `--frame` only when requested or useful for presentation. It adds a decorative title bar and surrounding padding outside the fixed content viewport: output dimensions become width + 48 by height + 88. Its traffic lights are drawn shapes. It does not create a real window or validate native window chrome.
 
 Inspect the generated image with the available local-image viewer before reporting visual results. If content is absent or clipped, first check the fixture's layout and viewport. Stop and explain components that need a window, app lifecycle, or unavailable resources rather than quietly launching the production app.
 
-## Interactive gallery
+## Gallery and live window
 
-When the user wants to choose a theme or frame, generate a self-contained HTML gallery:
+Two further outputs use the same fixture contract. Read the linked reference in full before producing either; each has rules on output paths, launching, and what counts as verified.
 
-```bash
-bash "<skill-directory>/scripts/gallery.sh" \
-  "/absolute/path/Fixture.swift" "/absolute/path/component-gallery.html" \
-  480 320 en_US "Account preferences"
-```
+- **HTML theme gallery**, when the user wants to compare light/dark or toggle the decorative frame: `run --mode gallery`, or `scripts/gallery.sh` directly. See [references/gallery.md](references/gallery.md).
+- **Live native window**, for real buttons, text input, focus, and navigation: `run --mode live`, or `scripts/live.sh` directly. It builds an `.app` and does not launch it. A static fixture with inert actions shows nothing when clicked; [references/live.md](references/live.md) explains when to add a separate stateful fixture with `configure --live-fixture`. An open window never picks up code changes: after updating the fixture, `refresh` rebuilds the app at the same path, closes the old window, and reopens it (same reference).
 
-Arguments are fixture, output HTML, content width, content height, locale, and optional title. The dimension and locale rules match `render.sh`. The fixture is compiled once and rendered in four fresh processes: light/dark, each with/without the frame. Only after all renders succeed is the HTML replaced atomically. Use task-owned output paths; directory/symlink outputs and a path that aliases the fixture are rejected.
+## Present the result
 
-The file embeds all four PNGs and has no external assets or requests. Its native radio buttons and checkbox switch the rendered image, caption and pixel dimensions; the viewport stays fixed. The component itself remains a static render, including its controls. Inspect at least one image and exercise the gallery controls in an available browser before reporting interaction as verified.
+Inspect every artifact yourself before showing it, then present it with whatever the current agent offers. Use the tools actually available in the session; do not assume one from this list exists.
 
-## Live native window
+**Output location.** Use a task-owned directory. When the client can only display files inside the project, write to `<project-root>/.swiftui-preview/artifacts/` (create it first) and perform no Git actions on it unless requested.
 
-For real buttons, text input, focus, and next/back transitions, use the same `PreviewFixture.makeView()` entry point with stateful local actions. [assets/LiveExampleFixture.swift](assets/LiveExampleFixture.swift) demonstrates welcome → editable form → success, a simulated error, and Back actions without services or persistence.
+**Claude Code.**
 
-Build a standalone app at a **new** output path:
+- PNG: read the file with the Read tool to inspect the image. To show it, use the session's file-presenting or preview tool when one exists; otherwise give the absolute path as a link, and run `open "/absolute/path/component-light.png"` when the user asked to see it. Inline Markdown images do not render in a terminal.
+- HTML gallery: open it in an available browser or preview tool using its `file://` URL, or run `open "/absolute/path/component-gallery.html"`. Exercise the theme and frame controls through a browser tool before reporting them verified; without one, say the controls were not exercised.
+- Live app: run `open "/absolute/path/SwiftUI Preview.app"` when launching is within the request. Verify interaction only through a tool that can drive the native window; otherwise ask the user to try it and report interaction as unverified.
+- If a sandboxed shell blocks `swiftc` or its temporary files, request permission to rerun the same helper. Do not edit the helpers or move their temporary directories into the project.
 
-```bash
-bash "<skill-directory>/scripts/live.sh" \
-  "/absolute/path/LiveFixture.swift" "/absolute/path/SwiftUI Preview.app" \
-  640 480 en_US
-```
+**Codex.** For HTML, discover `open_in_codex` and its current schema. Open the gallery using `target: "browser"`, `placement: "right"`, and the supported absolute `file` path or `url`. For PNGs, use the same tool with `placement: "right"` and an absolute `file` path. If it only reports a queued request, say that the preview was queued; do not claim the user has already seen an opened panel. If unavailable, use an inline Markdown image with the absolute image path, such as `![Component render](/absolute/path/component-light.png)`.
 
-Arguments are fixture, output app, content width, content height, and initial locale. Dimensions and locale validation match the renderer. The parent directory must exist; existing files, directories and symlinks are rejected. A failed compile leaves no partial app. The build uses Swift 6 strict concurrency and macOS 14 as its minimum target. It compiles only the supplied fixture and `scripts/LiveHost.swift`, with a unique generic bundle identifier and no project app delegate, entitlements, services, or production entry point.
-
-The command **builds only**. When launching a local preview is within the user's request and permitted by the environment, open that exact generated `.app` through the available native-app tooling or Finder. Respect a launch denial; report the limitation and leave the built artifact available for review. The native window is separate from Codex's HTML/image right panel. Do not claim interaction was tested until you have exercised it in the actual window.
-
-Developer controls sit above the fixed content viewport: System/Light/Dark appearance, the initial locale plus `en_US` and `ru_RU`, and Reset. Theme and locale selections are ephemeral. Locale changes inject SwiftUI's environment; they do not create translations, link missing bundles, or automatically set RTL layout. Reset changes fixture identity to recreate its view-local state. It does not roll back globals, files, stores or any effects outside the fixture. Changes to Swift source require a new build at a new output path.
-
-This is a trusted-code helper, not a sandbox. Supplied fixtures execute with normal user permissions when launched; review them and keep their dependencies synthetic and local. For project dependencies, assets, or String Catalogs, explicitly adapt and review the build rather than silently linking the production app or its lifecycle.
-
-## Present in Codex
-
-For HTML, discover `open_in_codex` and its current schema. Open the gallery using `target: "browser"`, `placement: "right"`, and the supported absolute `file` path or `url`. Browser support for local files varies. If a file cannot open, use an available, permitted local web preview flow or explain the limitation and link the HTML. A local preview server, when supported, should bind to `127.0.0.1` and serve only the task's artifact directory; do not expose the project or home directory. Check the current browser runtime's documented navigation support rather than assuming all localhost previews are prohibited.
-
-For PNGs, discover `open_in_codex` when the Codex app tools are available. Use its current schema to open the generated file with `placement: "right"` and an absolute `file` path. If it only reports a queued request, say that the preview was queued; do not claim the user has already seen an opened panel. If unavailable, use an inline Markdown image with the absolute image path, such as `![Component render](/absolute/path/component-light.png)`.
+**Any agent.** Browser support for local files varies. If a file cannot open, use an available, permitted local web preview flow or explain the limitation and link the HTML. A local preview server, when supported, should bind to `127.0.0.1` and serve only the task's artifact directory; do not expose the project or home directory. Check the current browser runtime's documented navigation support rather than assuming all localhost previews are prohibited.
 
 Label the artifact a component render, name its appearance/locale/viewport, and identify the frame as decorative when used. Detached rendering is useful for static layout and styles; it does not validate focus, accessibility behavior, interaction, animations, window-dependent materials, or asynchronous lifecycle state. OS and toolchain versions can change native control appearance.
+
+Every output is a macOS rendering. When discovery shows iOS platform evidence for the project or source, tell the user that controls, fonts, and metrics follow macOS conventions and differ on iOS (a `.destructive` button is not tinted red, lists and navigation chrome look different), and that device fidelity needs a Simulator or Xcode Canvas.

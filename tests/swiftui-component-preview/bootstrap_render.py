@@ -6,7 +6,7 @@ import subprocess
 import sys
 import tempfile
 
-SCRIPT = Path(__file__).resolve().parents[1] / 'scripts/bootstrap.py'
+SCRIPT = (Path(__file__).resolve().parents[2] / 'skills' / 'swiftui-component-preview') / 'scripts/bootstrap.py'
 SOURCE = '''import SwiftUI
 
 struct SupplyStatus: Sendable {

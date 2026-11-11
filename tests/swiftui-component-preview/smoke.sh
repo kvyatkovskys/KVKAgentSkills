@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-skill_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+skill_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../skills/swiftui-component-preview" && pwd -P)"
 test_dir="$(mktemp -d "${TMPDIR:-/tmp}/component-preview-test.XXXXXX")"
 trap 'rm -rf "$test_dir"' EXIT
 mkdir -p "$test_dir/path with spaces"
@@ -74,4 +74,13 @@ fi
 bash "$renderer" "$fixture" "$test_dir/framed.png" 480 320 light en_US --frame
 check_png "$test_dir/framed.png" 528 408
 check_cleanup
-printf 'PASS: invalid input and compiler failures rejected; light, dark, spaced paths, framed dimensions, and temporary cleanup verified\n'
+bash "$renderer" "$fixture" "$test_dir/fit-height.png" 390 fit light en_US 2>"$test_dir/fit.log"
+grep -q '^render: fitted content size 390x[0-9]*$' "$test_dir/fit.log"
+fitted_height="$(sed -n 's/^render: fitted content size 390x//p' "$test_dir/fit.log")"
+check_png "$test_dir/fit-height.png" 390 "$fitted_height"
+bash "$renderer" "$fixture" "$test_dir/fit-both.png" fit fit dark en_US 2>"$test_dir/fit.log"
+fitted="$(sed -n 's/^render: fitted content size //p' "$test_dir/fit.log")"
+check_png "$test_dir/fit-both.png" "${fitted%x*}" "${fitted#*x}"
+(( ${fitted%x*} > 1 && ${fitted#*x} > 1 ))
+check_cleanup
+printf 'PASS: invalid input and compiler failures rejected; light, dark, spaced paths, framed dimensions, fitted sizes, and temporary cleanup verified\n'

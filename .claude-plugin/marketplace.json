@@ -1,0 +1,14 @@
+{
+  "name": "kvk-agent-skills",
+  "owner": { "name": "kvyatkovskys" },
+  "metadata": {
+    "description": "KVKAgentSkills: reusable skills for coding agents."
+  },
+  "plugins": [
+    {
+      "name": "kvk-agent-skills",
+      "source": "./",
+      "description": "Reusable skills for coding agents, including SwiftUI component previews."
+    }
+  ]
+}

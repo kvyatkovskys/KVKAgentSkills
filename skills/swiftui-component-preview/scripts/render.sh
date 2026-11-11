@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-    printf 'Usage: %s fixture.swift output.png width height light|dark locale [--frame]\n' "$0" >&2
+    printf 'Usage: %s fixture.swift output.png width|fit height|fit light|dark locale [--frame]\n' "$0" >&2
 }
 fail() { printf 'render: %s\n' "$1" >&2; exit 2; }
 
@@ -21,8 +21,9 @@ fi
 
 # Length is bounded before numeric comparison, including on Bash 3.2.
 for dimension in "$width" "$height"; do
-    [[ "$dimension" =~ ^[1-9][0-9]{0,3}$ ]] || fail 'Dimensions must be integers from 1 to 4096.'
-    (( dimension <= 4096 )) || fail 'Dimensions must be integers from 1 to 4096.'
+    [[ "$dimension" == fit ]] && continue
+    [[ "$dimension" =~ ^[1-9][0-9]{0,3}$ ]] || fail 'Dimensions must be integers from 1 to 4096, or fit.'
+    (( dimension <= 4096 )) || fail 'Dimensions must be integers from 1 to 4096, or fit.'
 done
 [[ "$theme" == light || "$theme" == dark ]] || fail 'Appearance must be light or dark.'
 [[ ${#locale} -le 128 && "$locale" =~ ^[A-Za-z][A-Za-z0-9_@=.-]*$ ]] || fail 'Supply a locale identifier such as en_US or de-DE.'

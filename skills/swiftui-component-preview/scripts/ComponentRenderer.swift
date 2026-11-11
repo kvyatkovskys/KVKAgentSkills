@@ -6,6 +6,7 @@ private enum RenderError: Error {
     case appearanceUnavailable
     case bitmapAllocationFailed
     case pngEncodingFailed
+    case contentHasNoFittingSize
 }
 
 @main
@@ -23,15 +24,39 @@ private enum ComponentRenderer {
     @MainActor
     private static func render() throws {
         let arguments = CommandLine.arguments
+        func dimension(_ value: String) -> Int?? {
+            if value == "fit" { return .some(nil) }
+            guard let number = Int(value), (1...4096).contains(number) else { return nil }
+            return number
+        }
         guard arguments.count == 7,
-              let width = Int(arguments[2]), (1...4096).contains(width),
-              let height = Int(arguments[3]), (1...4096).contains(height),
+              let requestedWidth = dimension(arguments[2]),
+              let requestedHeight = dimension(arguments[3]),
               ["light", "dark"].contains(arguments[4]),
               ["true", "false"].contains(arguments[6]) else {
             throw RenderError.invalidArguments
         }
         let dark = arguments[4] == "dark"
         let framed = arguments[6] == "true"
+        let locale = Locale(identifier: arguments[5])
+        var width = requestedWidth ?? 0
+        var height = requestedHeight ?? 0
+        if requestedWidth == nil || requestedHeight == nil {
+            // A fitted axis takes the fixture's ideal size; a numeric axis stays fixed.
+            let probe = NSHostingView(rootView: PreviewFixture.makeView()
+                .frame(width: requestedWidth.map { CGFloat($0) },
+                       height: requestedHeight.map { CGFloat($0) })
+                .fixedSize(horizontal: requestedWidth == nil, vertical: requestedHeight == nil)
+                .environment(\.locale, locale))
+            probe.layoutSubtreeIfNeeded()
+            let fitted = probe.fittingSize
+            width = requestedWidth ?? Int(fitted.width.rounded(.up))
+            height = requestedHeight ?? Int(fitted.height.rounded(.up))
+            guard (1...4096).contains(width), (1...4096).contains(height) else {
+                throw RenderError.contentHasNoFittingSize
+            }
+            FileHandle.standardError.write(Data("render: fitted content size \(width)x\(height)\n".utf8))
+        }
         let contentSize = NSSize(width: width, height: height)
         let imageSize = NSSize(width: width + (framed ? 48 : 0),
                                height: height + (framed ? 88 : 0))
@@ -41,7 +66,7 @@ private enum ComponentRenderer {
         let root = ComponentSurface(content: PreviewFixture.makeView(),
                                     size: contentSize, framed: framed)
             .environment(\.colorScheme, dark ? .dark : .light)
-            .environment(\.locale, Locale(identifier: arguments[5]))
+            .environment(\.locale, locale)
             .transaction { $0.disablesAnimations = true }
 
         // This hosting view is detached. No application or window is created.
