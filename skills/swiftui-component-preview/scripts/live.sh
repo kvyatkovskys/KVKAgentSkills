@@ -3,6 +3,13 @@ set -euo pipefail
 
 usage() { printf 'Usage: %s fixture.swift output.app width height locale\n' "$0" >&2; }
 fail() { printf 'live: %s\n' "$1" >&2; exit 2; }
+
+# PREVIEW_PLATFORM=ios hands the same arguments to the iOS Simulator helper.
+platform="${PREVIEW_PLATFORM:-macos}"
+[[ "$platform" == macos || "$platform" == ios ]] || fail 'PREVIEW_PLATFORM must be macos or ios.'
+if [[ "$platform" == ios ]]; then
+    exec /bin/bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/ios-live.sh" "$@"
+fi
 [[ $# -eq 5 ]] || { usage; exit 2; }
 fixture="$1"
 output="$2"

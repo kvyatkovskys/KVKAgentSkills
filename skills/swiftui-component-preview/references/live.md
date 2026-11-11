@@ -1,6 +1,6 @@
 # Live native window
 
-Read this before building or launching a live preview. `<skill-directory>` is the directory containing `SKILL.md`.
+Read this before building or launching a live preview. On platform `ios` the live preview is an app in the iOS Simulator instead of a macOS window; [ios.md](ios.md) replaces the build, launch, controls, and viewport rules below, while the fixture guidance and `refresh` still apply. `<skill-directory>` is the directory containing `SKILL.md`.
 
 For real buttons, text input, focus, and next/back transitions, use the same `PreviewFixture.makeView()` entry point with stateful local actions. [../assets/LiveExampleFixture.swift](../assets/LiveExampleFixture.swift) demonstrates a `NavigationStack` with pushed screens (welcome → editable profile → success → details), a sheet, an alert for a simulated error, a confirmation dialog, and common controls (text fields, segmented picker, stepper, slider, toggles), all without services or persistence. Sheets, alerts, and navigation chrome need the real window; do not judge them from a detached PNG render.
 

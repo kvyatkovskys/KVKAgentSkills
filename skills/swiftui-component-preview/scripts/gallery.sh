@@ -13,7 +13,11 @@ width="$3"
 height="$4"
 locale="$5"
 title="${6-SwiftUI component}"
+# PREVIEW_PLATFORM=ios renders in an iOS Simulator; there "screen screen" is the whole device.
+platform="${PREVIEW_PLATFORM:-macos}"
+[[ "$platform" == macos || "$platform" == ios ]] || fail 'PREVIEW_PLATFORM must be macos or ios.'
 for dimension in "$width" "$height"; do
+    [[ "$platform" == ios && "$dimension" == screen ]] && continue
     [[ "$dimension" =~ ^[1-9][0-9]{0,3}$ ]] || fail 'Dimensions must be integers from 1 to 4096.'
     (( dimension <= 4096 )) || fail 'Dimensions must be integers from 1 to 4096.'
 done
@@ -35,6 +39,15 @@ temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/swiftui-component-gallery.XXXXXX")"
 trap 'rm -rf "$temp_dir"' EXIT
 trap 'exit 130' INT
 trap 'exit 143' HUP TERM
+
+if [[ "$platform" == ios ]]; then
+    # One simulator launch writes all four variants and the content size in points.
+    mkdir "$temp_dir/renders"
+    bash "$script_dir/ios-render.sh" --variants "$fixture" "$temp_dir/renders" "$width" "$height" "$locale"
+    size="$(cat "$temp_dir/renders/size.txt")"
+    python3 "$script_dir/gallery_html.py" "$temp_dir/renders" "$output" "${size%x*}" "${size#*x}" "$locale" "$title" "$fixture" "${PREVIEW_IOS_SCALE:-2}"
+    exit
+fi
 
 # Language mode: Swift 6 with strict concurrency when the compiler has it, else Swift 5.
 # PREVIEW_SWIFT_VERSION=5 compiles fixtures adapted from Swift 5 projects without strict checks.

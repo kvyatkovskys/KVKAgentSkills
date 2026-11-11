@@ -1,6 +1,6 @@
 # SwiftUI Component Preview
 
-A standalone agent skill for Claude Code, Codex, and other [Agent Skills](https://agentskills.io/specification) runtimes. It discovers a project's SwiftUI sources and has the agent adapt the requested real component into a local fixture. Render macOS-compatible components as PNGs using a detached `NSHostingView`, compare images in an offline HTML gallery, or build an interactive native preview window. PNGs and galleries can be shown in the agent's file, image, or browser panel; the live preview is a separate macOS window. Optional framing in static renders is decorative.
+A standalone agent skill for Claude Code, Codex, and other [Agent Skills](https://agentskills.io/specification) runtimes. It discovers a project's SwiftUI sources and has the agent adapt the requested real component into a local fixture. Render components as PNGs, compare images in an offline HTML gallery, or build an interactive preview. macOS components render natively through a detached `NSHostingView` and run live in a native window; iPhone and iPad components render and run inside an iOS Simulator, with real iOS controls and metrics. PNGs and galleries can be shown in the agent's file, image, or browser panel; the live preview is a separate macOS window or the simulator. Optional framing in static renders is decorative.
 
 ## Three outputs
 
@@ -26,15 +26,19 @@ A real macOS window running the fixture: buttons click, fields take text, naviga
 
 ![Live preview window showing a profile form with a segmented picker, a stepper and the control bar](../../docs/images/swiftui-component-preview/live-window.png)
 
+## iOS and iPadOS
+
+The platform is read from the project: the component's own `import UIKit` or `import AppKit`, then the project's settings. A project that targets both iOS and macOS, or declares neither, makes the agent ask once and remember the answer; naming the platform in the request ("on iPhone") skips the question. On platform `ios`, the same three outputs come from an iOS Simulator: the fixture is compiled for the simulator, wrapped in a minimal app, and run on the device you name (`--device "iPhone 17"`, `--device "iPad (A16)"`) or on one that is already booted. Renders use real iOS controls, fonts, and size classes; `screen` renders a whole device screen with safe areas and navigation bars; `--scale` sets pixels per point (default 2). Fixtures may import UIKit. The live preview is the fixture running full screen in the simulator, and `refresh` reinstalls and relaunches it; `--live-host catalyst` opens it in an ordinary Mac window with a control bar instead, as an iPad interface on the Mac. A simulator the skill boots stays booted for later previews. Details are in [references/ios.md](references/ios.md).
+
 ## What to ask for
 
 Name the output to choose it: `png`, `gallery`, or `live`, as in `/swiftui-component-preview live SettingsView`. Without one the agent infers it from the request (looks → PNG, comparing themes → gallery, clicking through → live window), defaults to a PNG for a single component, and asks for a whole screen with no hint.
 
-On first use the skill inspects the project and adapts the real component into a project-local fixture, saving relative-path configuration in `.swiftui-preview/` for later calls. UIKit-only screens and complex project dependencies need a Simulator or a project-specific workflow.
+On first use the skill inspects the project and adapts the real component into a project-local fixture, saving relative-path configuration in `.swiftui-preview/` for later calls. Ask for an iPhone or iPad preview, or use a component with UIKit or iOS-only APIs, and the agent configures the iOS Simulator path. Complex project dependencies need a project-specific workflow.
 
 ## Requirements
 
-macOS 14 or later and Xcode 15 or later (Swift 5.9+) with its command-line tools. Swift 6 is not required: builds use Swift 6 language mode with strict concurrency when the compiler has it and Swift 5 mode otherwise, and `--swift-version 5` (or `PREVIEW_SWIFT_VERSION=5`) forces Swift 5 mode for fixtures adapted from Swift 5 projects. Project onboarding, galleries and live builds additionally require Python 3.8 or later. No third-party packages. The helpers execute supplied Swift code with your normal permissions, so use trusted, self-contained fixtures with synthetic data. Static actions can be inert; live fixtures can use view-local state, validation and navigation. macOS-compatible SwiftUI components share the same fixture API across projects. UIKit-only components need an iOS Simulator/Canvas workflow; project modules, assets and String Catalogs need an explicitly adapted build.
+macOS 14 or later and Xcode 15 or later (Swift 5.9+) with its command-line tools. Swift 6 is not required: builds use Swift 6 language mode with strict concurrency when the compiler has it and Swift 5 mode otherwise, and `--swift-version 5` (or `PREVIEW_SWIFT_VERSION=5`) forces Swift 5 mode for fixtures adapted from Swift 5 projects. Project onboarding, galleries and live builds additionally require Python 3.8 or later. No third-party packages. The helpers execute supplied Swift code with your normal permissions, so use trusted, self-contained fixtures with synthetic data. Static actions can be inert; live fixtures can use view-local state, validation and navigation. The fixture API is the same across projects and platforms. iOS and iPadOS previews additionally need a full Xcode with an iOS 17 or later simulator runtime. Project modules, assets and String Catalogs need an explicitly adapted build.
 
 ## Install
 
