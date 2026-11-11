@@ -2,6 +2,12 @@
 
 A standalone agent skill for Claude Code, Codex, and other [Agent Skills](https://agentskills.io/specification) runtimes. It discovers a project's SwiftUI sources and has the agent adapt the requested real component into a local fixture. Render macOS-compatible components as PNGs using a detached `NSHostingView`, compare images in an offline HTML gallery, or build an interactive native preview window. PNGs and galleries can be shown in the agent's file, image, or browser panel; the live preview is a separate macOS window. Optional framing in static renders is decorative.
 
+## What to ask for
+
+Name the output to choose it: `png`, `gallery`, or `live`, as in `/swiftui-component-preview live SettingsView`. Without one the agent infers it from the request (looks → PNG, comparing themes → gallery, clicking through → live window), defaults to a PNG for a single component, and asks for a whole screen with no hint.
+
+On first use the skill inspects the project and adapts the real component into a project-local fixture, saving relative-path configuration in `.swiftui-preview/` for later calls. UIKit-only screens and complex project dependencies need a Simulator or a project-specific workflow.
+
 ## Requirements
 
 macOS 14 or later and Xcode 15 or later (Swift 5.9+) with its command-line tools. Swift 6 is not required: builds use Swift 6 language mode with strict concurrency when the compiler has it and Swift 5 mode otherwise, and `--swift-version 5` (or `PREVIEW_SWIFT_VERSION=5`) forces Swift 5 mode for fixtures adapted from Swift 5 projects. Project onboarding, galleries and live builds additionally require Python 3.8 or later. No third-party packages. The helpers execute supplied Swift code with your normal permissions, so use trusted, self-contained fixtures with synthetic data. Static actions can be inert; live fixtures can use view-local state, validation and navigation. macOS-compatible SwiftUI components share the same fixture API across projects. UIKit-only components need an iOS Simulator/Canvas workflow; project modules, assets and String Catalogs need an explicitly adapted build.
@@ -20,10 +26,10 @@ npx skills add kvyatkovskys/KVKAgentSkills --skill swiftui-component-preview --a
 
 ```text
 /plugin marketplace add kvyatkovskys/KVKAgentSkills
-/plugin install kvk-agent-skills@kvk-agent-skills
+/plugin install apple-dev@kvk-agent-skills
 ```
 
-Or copy this `swiftui-component-preview` directory into `~/.claude/skills/` (all projects) or `<project>/.claude/skills/` (one project). Start a new session, then run `/swiftui-component-preview Show a preview of SettingsView` or simply ask for a SwiftUI component preview. Installed from the plugin marketplace, the command is `/kvk-agent-skills:swiftui-component-preview`. Put `png`, `gallery`, or `live` first to choose the output, for example `/swiftui-component-preview live SettingsView`; otherwise the agent infers it from the request and defaults to a PNG.
+Or copy this `swiftui-component-preview` directory into `~/.claude/skills/` (all projects) or `<project>/.claude/skills/` (one project). Start a new session, then run `/swiftui-component-preview Show a preview of SettingsView` or simply ask for a SwiftUI component preview. Installed from the plugin marketplace, the command is `/apple-dev:swiftui-component-preview`. Put `png`, `gallery`, or `live` first to choose the output, for example `/swiftui-component-preview live SettingsView`; otherwise the agent infers it from the request and defaults to a PNG.
 
 Claude Code asks for permission before running the helper scripts. They invoke `python3`, `bash`, and `xcrun swiftc` and write only to the output path you choose, a temporary directory, and `.swiftui-preview/` in the project.
 
@@ -75,12 +81,7 @@ The `.app` path must be new and its parent must exist. Open the generated app wh
 The tests live outside the installable skill, in `tests/swiftui-component-preview/` at the repository root. To verify the renderer and argument handling on a Mac, run from the repository root:
 
 ```bash
-bash tests/swiftui-component-preview/smoke.sh
-python3 tests/swiftui-component-preview/gallery.py
-bash tests/swiftui-component-preview/live.sh
-python3 tests/swiftui-component-preview/bootstrap.py
-python3 tests/swiftui-component-preview/bootstrap_render.py
-python3 tests/swiftui-component-preview/refresh.py
+bash tests/swiftui-component-preview/run.sh
 ```
 
 The tests use temporary files, check PNG dimensions and distinct theme images, reject invalid arguments, and verify failure cleanup. The gallery test also verifies title escaping, quoted paths, and preservation of existing output on compilation/render failures. The live test builds without launching, checks bundle metadata and an executable, rejects invalid/existing outputs, and verifies cleanup after compiler failures. Each test removes its fixtures and compiled binaries on exit. Generated images and binaries do not belong in the distributable skill.

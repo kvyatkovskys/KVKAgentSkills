@@ -2,6 +2,9 @@
 name: swiftui-component-preview
 description: Use when the user wants to see, preview, render, or screenshot a SwiftUI view or component without opening Xcode Canvas - checking layout, light/dark appearance, locale, fixture states, or local interaction of a macOS-compatible SwiftUI component. Produces PNG renders, an offline HTML theme gallery, or an interactive native macOS window from a fixture adapted from the project's real component.
 argument-hint: "[png|gallery|live] <component>"
+license: MIT
+metadata:
+  version: "1.1.0"
 ---
 
 # SwiftUI Component Preview
