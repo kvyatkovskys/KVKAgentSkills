@@ -324,7 +324,7 @@ def refresh(root, args):
     scripts = Path(__file__).resolve().parent
     build = subprocess.run(['/bin/bash', str(scripts / 'live.sh'), str(fixture), str(staged),
                             str(args.width), str(args.height), args.locale],
-                           stdout=subprocess.DEVNULL, check=False)
+                           stdout=subprocess.DEVNULL, env=helper_env(args), check=False)
     if build.returncode != 0:
         raise SetupError('Build failed; the previous app, its window, and the saved configuration are unchanged.')
     try:
@@ -343,6 +343,13 @@ def refresh(root, args):
         launched = subprocess.run(['/usr/bin/open', str(output)], check=False).returncode == 0
     return {'app': str(output), 'closed_previous_windows': closed, 'launched': launched,
             'note': 'A new process: view-local state in the previous window was not carried over.'}
+
+
+def helper_env(args):
+    """Pass an explicit language mode to the shell helpers; None keeps their auto-detection."""
+    if not args.swift_version:
+        return None
+    return dict(os.environ, PREVIEW_SWIFT_VERSION=args.swift_version)
 
 
 def dimension(value):
@@ -384,6 +391,8 @@ def main():
     refresh_parser.add_argument('--height', type=dimension, default=480)
     refresh_parser.add_argument('--locale', type=locale, default='en_US')
     refresh_parser.add_argument('--no-launch', action='store_true', help='Rebuild and replace only; do not open the app.')
+    for child in (run_parser, refresh_parser):
+        child.add_argument('--swift-version', choices=('5', '6'), help='Language mode for the build; default is 6 with strict concurrency when the compiler supports it, else 5.')
     args = parser.parse_args()
     try:
         root = root_path(args.root)
@@ -394,7 +403,7 @@ def main():
         elif args.action == 'refresh':
             result = refresh(root, args)
         else:
-            return subprocess.run(command(root, args), check=False).returncode
+            return subprocess.run(command(root, args), env=helper_env(args), check=False).returncode
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     except (SetupError, OSError, UnicodeError, ValueError) as error:

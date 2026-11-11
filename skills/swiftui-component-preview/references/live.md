@@ -12,7 +12,7 @@ bash "<skill-directory>/scripts/live.sh" \
   640 480 en_US
 ```
 
-Arguments are fixture, output app, content width, content height, and initial locale. Dimensions and locale validation match the renderer. The parent directory must exist; existing files, directories and symlinks are rejected. A failed compile leaves no partial app. The build uses Swift 6 strict concurrency and macOS 14 as its minimum target. It compiles only the supplied fixture and `scripts/LiveHost.swift`, with a unique generic bundle identifier and no project app delegate, entitlements, services, or production entry point.
+Arguments are fixture, output app, content width, content height, and initial locale. Dimensions and locale validation match the renderer. The parent directory must exist; existing files, directories and symlinks are rejected. A failed compile leaves no partial app. The build targets macOS 14 and uses the language mode described in `SKILL.md` (Swift 6 with strict concurrency when available, Swift 5 on request). It compiles only the supplied fixture and `scripts/LiveHost.swift`, with a unique generic bundle identifier and no project app delegate, entitlements, services, or production entry point.
 
 The command **builds only**. When launching a local preview is within the user's request and permitted by the environment, open that exact generated `.app` through the available native-app tooling or Finder. Respect a launch denial; report the limitation and leave the built artifact available for review. The native window is a separate macOS window, not part of the agent's file, image, or browser panel. Do not claim interaction was tested until you have exercised it in the actual window.
 

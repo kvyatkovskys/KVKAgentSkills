@@ -42,8 +42,18 @@ trap 'rm -rf "$temp_dir"' EXIT
 trap 'exit 130' INT
 trap 'exit 143' HUP TERM
 
+# Language mode: Swift 6 with strict concurrency when the compiler has it, else Swift 5.
+# PREVIEW_SWIFT_VERSION=5 compiles fixtures adapted from Swift 5 projects without strict checks.
+swift_mode="${PREVIEW_SWIFT_VERSION:-auto}"
+if [[ "$swift_mode" == auto ]]; then
+    if xcrun swiftc -version 2>&1 | grep -Eq 'Swift version ([6-9]|[1-9][0-9])\.'; then swift_mode=6; else swift_mode=5; fi
+fi
+[[ "$swift_mode" == 5 || "$swift_mode" == 6 ]] || fail 'PREVIEW_SWIFT_VERSION must be 5, 6, or auto.'
+swift_flags=(-swift-version "$swift_mode")
+if [[ "$swift_mode" == 6 ]]; then swift_flags+=(-strict-concurrency=complete); fi
+
 # The supplied Swift is executable code, with the caller's normal permissions.
-xcrun swiftc -swift-version 6 -strict-concurrency=complete -parse-as-library \
+xcrun swiftc "${swift_flags[@]}" -parse-as-library \
     -target "$(uname -m)-apple-macosx14.0" \
     -module-cache-path "$temp_dir/module-cache" \
     "$script_dir/ComponentRenderer.swift" "$fixture" -o "$temp_dir/render"

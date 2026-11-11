@@ -4,7 +4,7 @@ A standalone agent skill for Claude Code, Codex, and other [Agent Skills](https:
 
 ## Requirements
 
-macOS 14 or later, Xcode command-line tools, and Swift 6. Project onboarding, galleries and live builds additionally require Python 3.8 or later. No third-party packages. The helpers execute supplied Swift code with your normal permissions, so use trusted, self-contained fixtures with synthetic data. Static actions can be inert; live fixtures can use view-local state, validation and navigation. macOS-compatible SwiftUI components share the same fixture API across projects. UIKit-only components need an iOS Simulator/Canvas workflow; project modules, assets and String Catalogs need an explicitly adapted build.
+macOS 14 or later and Xcode 15 or later (Swift 5.9+) with its command-line tools. Swift 6 is not required: builds use Swift 6 language mode with strict concurrency when the compiler has it and Swift 5 mode otherwise, and `--swift-version 5` (or `PREVIEW_SWIFT_VERSION=5`) forces Swift 5 mode for fixtures adapted from Swift 5 projects. Project onboarding, galleries and live builds additionally require Python 3.8 or later. No third-party packages. The helpers execute supplied Swift code with your normal permissions, so use trusted, self-contained fixtures with synthetic data. Static actions can be inert; live fixtures can use view-local state, validation and navigation. macOS-compatible SwiftUI components share the same fixture API across projects. UIKit-only components need an iOS Simulator/Canvas workflow; project modules, assets and String Catalogs need an explicitly adapted build.
 
 ## Install
 
@@ -23,7 +23,7 @@ npx skills add kvyatkovskys/KVKAgentSkills --skill swiftui-component-preview --a
 /plugin install kvk-agent-skills@kvk-agent-skills
 ```
 
-Or copy this `swiftui-component-preview` directory into `~/.claude/skills/` (all projects) or `<project>/.claude/skills/` (one project). Start a new session, then run `/swiftui-component-preview Show a preview of SettingsView` or simply ask for a SwiftUI component preview. Installed from the plugin marketplace, the command is `/kvk-agent-skills:swiftui-component-preview`.
+Or copy this `swiftui-component-preview` directory into `~/.claude/skills/` (all projects) or `<project>/.claude/skills/` (one project). Start a new session, then run `/swiftui-component-preview Show a preview of SettingsView` or simply ask for a SwiftUI component preview. Installed from the plugin marketplace, the command is `/kvk-agent-skills:swiftui-component-preview`. Put `png`, `gallery`, or `live` first to choose the output, for example `/swiftui-component-preview live SettingsView`; otherwise the agent infers it from the request and defaults to a PNG.
 
 Claude Code asks for permission before running the helper scripts. They invoke `python3`, `bash`, and `xcrun swiftc` and write only to the output path you choose, a temporary directory, and `.swiftui-preview/` in the project.
 

@@ -83,4 +83,24 @@ fitted="$(sed -n 's/^render: fitted content size //p' "$test_dir/fit.log")"
 check_png "$test_dir/fit-both.png" "${fitted%x*}" "${fitted#*x}"
 (( ${fitted%x*} > 1 && ${fitted#*x} > 1 ))
 check_cleanup
-printf 'PASS: invalid input and compiler failures rejected; light, dark, spaced paths, framed dimensions, fitted sizes, and temporary cleanup verified\n'
+# Swift 5 mode accepts code that Swift 6 strict concurrency rejects.
+cat >"$test_dir/Legacy.swift" <<'SWIFT'
+import SwiftUI
+final class LegacyCounter { var value = 3 }
+let legacyCounter = LegacyCounter()
+@MainActor enum PreviewFixture {
+    static func makeView() -> some View { Text("Count \(legacyCounter.value)").padding() }
+}
+SWIFT
+if PREVIEW_SWIFT_VERSION=6 bash "$renderer" "$test_dir/Legacy.swift" "$test_dir/legacy6.png" 200 80 light en_US >"$test_dir/failure.log" 2>&1; then
+    printf 'Expected strict concurrency to reject the legacy fixture in Swift 6 mode\n' >&2
+    exit 1
+fi
+PREVIEW_SWIFT_VERSION=5 bash "$renderer" "$test_dir/Legacy.swift" "$test_dir/legacy5.png" 200 80 light en_US
+check_png "$test_dir/legacy5.png" 200 80
+if PREVIEW_SWIFT_VERSION=7 bash "$renderer" "$fixture" "$test_dir/invalid.png" 480 320 light en_US >"$test_dir/failure.log" 2>&1; then
+    printf 'Expected an invalid language mode to be rejected\n' >&2
+    exit 1
+fi
+check_cleanup
+printf 'PASS: invalid input and compiler failures rejected; light, dark, spaced paths, framed dimensions, fitted sizes, Swift 5/6 language modes, and temporary cleanup verified\n'

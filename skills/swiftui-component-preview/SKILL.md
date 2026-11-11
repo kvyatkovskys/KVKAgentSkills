@@ -1,11 +1,31 @@
 ---
 name: swiftui-component-preview
 description: Use when the user wants to see, preview, render, or screenshot a SwiftUI view or component without opening Xcode Canvas - checking layout, light/dark appearance, locale, fixture states, or local interaction of a macOS-compatible SwiftUI component. Produces PNG renders, an offline HTML theme gallery, or an interactive native macOS window from a fixture adapted from the project's real component.
+argument-hint: "[png|gallery|live] <component>"
 ---
 
 # SwiftUI Component Preview
 
-Create a component render from a small, deterministic SwiftUI fixture. Requires macOS 14 or later and an Xcode toolchain with Swift 6. Project onboarding, the HTML gallery, and live builder also require Python 3.8 or later (standard library only). Choose PNGs for static inspection, the gallery for image comparisons, or a native window for real fixture interactions. These helpers do not provide Xcode Canvas or hot reload.
+Create a component render from a small, deterministic SwiftUI fixture. Requires macOS 14 or later and Xcode 15 or later (Swift 5.9+); Swift 6 is not required. Project onboarding, the HTML gallery, and live builder also require Python 3.8 or later (standard library only). Choose PNGs for static inspection, the gallery for image comparisons, or a native window for real fixture interactions. These helpers do not provide Xcode Canvas or hot reload.
+
+## Choose the output
+
+Decide the output before building anything, in this order:
+
+1. **Explicit word.** If the request or the skill arguments start with or name `png`, `gallery`, or `live` (also "screenshot", "render" for PNG; "window", "interactive" for live), use that.
+2. **Intent of the request.**
+
+   | The user wants to | Output |
+   | --- | --- |
+   | see how it looks, check layout, spacing, text, a state, a locale | PNG |
+   | compare light and dark, or framed and unframed, side by side or by toggling | Gallery |
+   | click, type, toggle, navigate, open a sheet or alert, check a flow | Live window |
+
+   When a request matches more than one row, interaction wins: anything that only appears after a click or input needs the live window.
+3. **Whole screen or flow, no signal.** If the target is an entire screen or a multi-step flow and neither rule above applies, as in "preview the checkout screen", ask one question offering PNG, gallery, and live window.
+4. **Default.** For a single component with no signal, produce one light PNG, sized with `fit`. It is the fastest output and the only one you can inspect yourself. Then add one line offering the other two outputs.
+
+Rules 1, 2, and 4 proceed without asking. When several outputs are requested, produce all of them from the same configuration. Do not store the choice in `.swiftui-preview/config.json`: it belongs to the request, not the project.
 
 ## First use in a project
 
@@ -63,6 +83,8 @@ enum PreviewFixture {
     }
 }
 ```
+
+The helpers compile in Swift 6 language mode with strict concurrency when the compiler supports it, and in Swift 5 mode otherwise. When a fixture adapted from a Swift 5 project fails only on concurrency diagnostics (`Sendable`, actor isolation), do not rewrite the component to satisfy them: pass `--swift-version 5` to `run` or `refresh`, or set `PREVIEW_SWIFT_VERSION=5` for the direct helpers, and say the preview was built in Swift 5 mode.
 
 Use synthetic data and fixed initial state. Use inert actions for static renders; live fixtures can implement view-local state changes, validation, and navigation. Include the component's required local view types in the fixture; preserve real SwiftUI controls such as `Form`, `TextField`, `SecureField`, and `Toggle`. Keep credential stores, network calls, and background tasks out of the fixture.
 
