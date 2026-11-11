@@ -73,6 +73,7 @@ private struct LivePreview: View {
     @State private var locale: String
     @State private var generation = UUID()
     @State private var viewport: CGSize
+    @State private var didInitialFit = false
 
     init(configuration: PreviewConfiguration) {
         self.configuration = configuration
@@ -94,7 +95,18 @@ private struct LivePreview: View {
                     .environment(\.locale, Locale(identifier: locale))
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .clipped()
-                    .onChange(of: proxy.size, initial: true) { _, size in viewport = size }
+                    .onChange(of: proxy.size, initial: true) { _, size in
+                        viewport = size
+                        // A fixture's navigation toolbar takes height from the default window size;
+                        // correct once so the viewport opens at exactly the configured size.
+                        if !didInitialFit {
+                            didInitialFit = true
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .milliseconds(200))
+                                restoreSize(animated: false)
+                            }
+                        }
+                    }
             }
             .frame(minWidth: minimumWidth, idealWidth: configuredSize.width, maxWidth: .infinity,
                    minHeight: minimumHeight, idealHeight: configuredSize.height, maxHeight: .infinity)
@@ -102,7 +114,7 @@ private struct LivePreview: View {
             Divider()
             PreviewControls(theme: $theme, locale: $locale, initialLocale: configuration.locale,
                             viewport: viewport, isConfiguredSize: viewport == configuredSize,
-                            restoreSize: restoreSize) {
+                            restoreSize: { restoreSize() }) {
                 generation = UUID()
             }
             .frame(maxWidth: .infinity)
@@ -114,10 +126,16 @@ private struct LivePreview: View {
         .onChange(of: theme, initial: true) { _, theme in NSApp.appearance = theme.appearance }
     }
 
-    private func restoreSize() {
-        guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: \.isVisible) else { return }
-        window.setContentSize(NSSize(width: configuredSize.width,
-                                     height: configuredSize.height + controlsHeight + 1))
+    /// Grows or shrinks the window by the difference between the live and configured viewport.
+    private func restoreSize(animated: Bool = true) {
+        guard viewport != configuredSize,
+              let window = NSApp.keyWindow ?? NSApp.windows.first(where: \.isVisible) else { return }
+        var frame = window.frame
+        let extraHeight = configuredSize.height - viewport.height
+        frame.size.width += configuredSize.width - viewport.width
+        frame.size.height += extraHeight
+        frame.origin.y -= extraHeight
+        window.setFrame(frame, display: true, animate: animated)
     }
 }
 
