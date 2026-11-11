@@ -57,6 +57,27 @@ Copy `skills/<skill-name>/` into your agent's skills directory, for example `~/.
 
 Start a new session after installing. Invoke a skill by name, `/<skill-name>` in Claude Code or `$<skill-name>` in Codex, or just describe the task; agents pick skills up from their descriptions.
 
+## Compatibility
+
+Skills here use only the open Agent Skills format, so any agent that loads `SKILL.md` can install them. What differs is what each skill needs from the agent at run time; check the skill's requirements against the last three columns.
+
+| Agent | Status | Runs local shell | Reads images | Can open GUI windows |
+| --- | --- | --- | --- | --- |
+| Claude Code | Tested | Yes | Yes | Yes |
+| Codex CLI | Tested | Yes | Yes | Yes, outside a restricted sandbox |
+| Cursor | Expected, not yet verified | Yes | Yes | Yes |
+| GitHub Copilot (VS Code agent mode, Copilot CLI) | Expected, not yet verified | Yes | Yes | Yes |
+| Gemini CLI | Expected, not yet verified | Yes | Yes | Yes |
+| OpenCode | Expected, not yet verified | Yes | Depends on the model | Yes |
+| Windsurf, Amp, Goose, Roo Code, Kiro, Junie | Expected, not yet verified | Yes | Depends on the model | Yes |
+| Cloud agents on Linux runners (Codex cloud, Copilot coding agent, Jules) | Format loads; macOS-only skills cannot run | Remote only | Varies | No |
+
+"Tested" means the skills are exercised in that agent before a release. "Expected" means the agent loads the same format and nothing in the skills is specific to another agent, but nobody has confirmed a full run; reports are welcome.
+
+Agent-specific extras are optional and ignored elsewhere: `argument-hint` in the frontmatter and `.claude-plugin/marketplace.json` are for Claude Code, `agents/openai.yaml` is for Codex.
+
+For `swiftui-component-preview` specifically: every output needs a local macOS shell with Xcode. Without image input the agent can still produce PNGs and the gallery but cannot inspect them itself. The live window needs a GUI session, so it does not work over SSH or in a sandbox that blocks launching apps.
+
 ## Repository layout
 
 ```text

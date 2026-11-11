@@ -7,11 +7,16 @@ Notable changes to the repository and to each skill. A skill's version is the `m
 ### Unreleased
 
 - Claude Code marketplace groups skills into plugins; `swiftui-component-preview` is in `apple-dev`.
+- README compatibility table: which agents are tested, which are expected to work, and what each skill needs from the agent.
 - `tests/run-all.sh`, `tools/validate.py`, CI, a skill template and `tools/new_skill.py`.
 
 ## swiftui-component-preview
 
-### 1.1.0 (unreleased)
+### 1.2.0 (unreleased)
+
+- Gallery embeds lossless WebP instead of PNG when `cwebp` is installed and the result is smaller; `PREVIEW_GALLERY_WEBP=0` opts out.
+
+### 1.1.0
 
 - Claude Code support: agent-neutral instructions, output selection rules (`png`, `gallery`, `live`), detail moved to `references/`.
 - `fit` sizing for PNG renders.
