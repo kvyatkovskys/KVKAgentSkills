@@ -27,7 +27,7 @@
    - `README.md`: add a row to the Skills table, including the plugin name.
    - `CHANGELOG.md`: add an entry.
 
-7. Verify before submitting. CI runs the first command on macOS and Linux:
+7. Verify before submitting. CI runs `tools/validate.py` and skill discovery on Linux and `tests/run-all.sh` on macOS:
 
    ```bash
    bash tests/run-all.sh

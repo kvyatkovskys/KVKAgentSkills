@@ -29,7 +29,7 @@ npx skills add kvyatkovskys/KVKAgentSkills --skill swiftui-component-preview --a
 /plugin install apple-dev@kvk-agent-skills
 ```
 
-Or copy this `swiftui-component-preview` directory into `~/.claude/skills/` (all projects) or `<project>/.claude/skills/` (one project). Start a new session, then run `/swiftui-component-preview Show a preview of SettingsView` or simply ask for a SwiftUI component preview. Installed from the plugin marketplace, the command is `/apple-dev:swiftui-component-preview`. Put `png`, `gallery`, or `live` first to choose the output, for example `/swiftui-component-preview live SettingsView`; otherwise the agent infers it from the request and defaults to a PNG.
+Or copy this `swiftui-component-preview` directory into `~/.claude/skills/` (all projects) or `<project>/.claude/skills/` (one project). Start a new session, then run `/swiftui-component-preview Show a preview of SettingsView` or simply ask for a SwiftUI component preview. Installed from the plugin marketplace, the command is `/apple-dev:swiftui-component-preview`.
 
 Claude Code asks for permission before running the helper scripts. They invoke `python3`, `bash`, and `xcrun swiftc` and write only to the output path you choose, a temporary directory, and `.swiftui-preview/` in the project.
 
@@ -76,7 +76,7 @@ bash scripts/live.sh assets/LiveExampleFixture.swift \
   "/tmp/component-renders/SwiftUI Preview.app" 640 480 en_US
 ```
 
-The `.app` path must be new and its parent must exist. Open the generated app when launch is authorized and permitted. Use Get started, edit the synthetic fields, change the plan and seats, open the notification preferences sheet, try the simulated error alert, continue to success, push View details, and use Start over with its confirmation dialog. About this demo on the welcome screen opens another sheet. Native developer controls offer System/Light/Dark, initial/English/Russian locales, and Reset outside the content viewport. Locale injection uses resources supplied by the fixture; it does not add translations. Reset recreates view-local state and does not undo effects elsewhere. Source edits require rebuilding at a new path. See [SKILL.md](SKILL.md) for isolation boundaries and resource limitations.
+The `.app` path must be new and its parent must exist. Open the generated app when launch is authorized and permitted. Use Get started, edit the synthetic fields, change the plan and seats, open the notification preferences sheet, try the simulated error alert, continue to success, push View details, and use Start over with its confirmation dialog. About this demo on the welcome screen opens another sheet. A glass bar beneath the content viewport offers System/Light/Dark, initial/English/Russian locales, the live viewport size, and Reset; the window is resizable and clicking the size restores the configured one. Locale injection uses resources supplied by the fixture; it does not add translations. Reset recreates view-local state and does not undo effects elsewhere. Source edits never reach an open window: rebuild with `bootstrap.py refresh` in a configured project, or build again at a new path. See [SKILL.md](SKILL.md) for isolation boundaries and resource limitations.
 
 The tests live outside the installable skill, in `tests/swiftui-component-preview/` at the repository root. To verify the renderer and argument handling on a Mac, run from the repository root:
 
@@ -84,7 +84,7 @@ The tests live outside the installable skill, in `tests/swiftui-component-previe
 bash tests/swiftui-component-preview/run.sh
 ```
 
-The tests use temporary files, check PNG dimensions and distinct theme images, reject invalid arguments, and verify failure cleanup. The gallery test also verifies title escaping, quoted paths, and preservation of existing output on compilation/render failures. The live test builds without launching, checks bundle metadata and an executable, rejects invalid/existing outputs, and verifies cleanup after compiler failures. Each test removes its fixtures and compiled binaries on exit. Generated images and binaries do not belong in the distributable skill.
+The tests use temporary files, check PNG dimensions and distinct theme images, reject invalid arguments, and verify failure cleanup. The gallery test also verifies title escaping, quoted paths, and preservation of existing output on compilation/render failures. The live test builds without launching, checks bundle metadata and an executable, rejects invalid/existing outputs, and verifies cleanup after compiler failures. The bootstrap tests cover discovery, configuration, path safety, stale hashes and the separate live fixture without a Swift toolchain; the refresh test covers rebuilding in place, failed builds and refusing foreign outputs. Each test removes its fixtures and compiled binaries on exit. Generated images and binaries do not belong in the distributable skill.
 
 ## License
 

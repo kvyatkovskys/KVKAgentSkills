@@ -12,7 +12,7 @@ bash "<skill-directory>/scripts/live.sh" \
   640 480 en_US
 ```
 
-Arguments are fixture, output app, content width, content height, and initial locale. Dimensions and locale validation match the renderer. The parent directory must exist; existing files, directories and symlinks are rejected. A failed compile leaves no partial app. The build targets macOS 14 and uses the language mode described in `SKILL.md` (Swift 6 with strict concurrency when available, Swift 5 on request). It compiles only the supplied fixture and `scripts/LiveHost.swift`, with a unique generic bundle identifier and no project app delegate, entitlements, services, or production entry point.
+Arguments are fixture, output app, content width, content height, and initial locale. Dimensions and locale validation match the renderer. The parent directory must exist; existing files, directories and symlinks are rejected. A failed compile leaves no partial app. The build targets macOS 14 and uses the language mode described in `SKILL.md` (Swift 6 with strict concurrency when the compiler supports it; Swift 5 otherwise or on request). It compiles only the supplied fixture and `scripts/LiveHost.swift`, with a unique generic bundle identifier and no project app delegate, entitlements, services, or production entry point.
 
 The command **builds only**. When launching a local preview is within the user's request and permitted by the environment, open that exact generated `.app` through the available native-app tooling or Finder. Respect a launch denial; report the limitation and leave the built artifact available for review. The native window is a separate macOS window, not part of the agent's file, image, or browser panel. Do not claim interaction was tested until you have exercised it in the actual window.
 
@@ -37,7 +37,7 @@ It starts a new process, so typed text, navigation position, and other view-loca
 
 A single fixture serves render, gallery, and live when its actions are view-local and visible, such as toggles, text fields, and navigation. Add a separate live fixture when the static one uses inert actions that would leave nothing to observe in the window, for example a button whose real effect goes through a service. In the live fixture, replace the service with a synthetic in-memory stand-in that produces a visible result: a state change, a simulated error, or a short `Task.sleep` before completing. Keep network, persistence, credential stores, and work that outlives the view out of both fixtures.
 
-Register it with `configure ... --live-fixture ".swiftui-preview/fixtures/StatusCardLive.swift"`. `run --mode live` then builds the live fixture while render and gallery keep the static one. The live fixture follows the same contract and text checks, its hash is recorded, and editing it requires `configure --replace` with every path again. Omitting `--live-fixture` on a replace removes it.
+Register it with `configure ... --live-fixture ".swiftui-preview/fixtures/StatusCardLive.swift"`. `run --mode live` then builds the live fixture while render and gallery keep the static one. The live fixture follows the same contract and text checks, its hash is recorded, and after editing it run `refresh`, or `configure --replace` with every path again. Omitting `--live-fixture` on a replace removes it.
 
 ## Viewport
 
