@@ -7,6 +7,7 @@ Notable changes to the repository and to each skill. A skill's version is the `m
 ### Unreleased
 
 - Claude Code marketplace groups skills into plugins; `swiftui-component-preview` is in `apple-dev`.
+- README compatibility table: which agents are tested, which are expected to work, and what each skill needs from the agent.
 - `tests/run-all.sh`, `tools/validate.py`, CI, a skill template and `tools/new_skill.py`.
 
 ## swiftui-component-preview
