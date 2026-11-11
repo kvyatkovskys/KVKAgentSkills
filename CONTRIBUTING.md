@@ -20,7 +20,7 @@
 
 4. Write tests in `tests/<skill-name>/` with `run.sh` as the single entry point. It must be runnable from any directory, clean up after itself, and skip (exit 0 with a `SKIP:` line) checks that need a platform the runner lacks. Tests live outside the skill so they are not installed.
 
-5. Write the skill's `README.md` for people: what it does, requirements, side effects (what it reads, writes and executes), limits, and how to run its tests.
+5. Write the skill's `README.md` for people: what it does, requirements, side effects (what it reads, writes and executes), limits, and how to run its tests. Put screenshots in `docs/images/<skill-name>/` and link them relatively, so they are not installed with the skill.
 
 6. Register it.
    - `.claude-plugin/marketplace.json`: add `./skills/<skill-name>` to the `skills` list of exactly one plugin, and bump that plugin's `version`. Plugins are domain groups (`apple-dev`, ...). Start a new group only for a new domain; give it `"source": "./"` and `"strict": false`.

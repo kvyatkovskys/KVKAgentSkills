@@ -2,6 +2,12 @@
 
 A standalone agent skill for Claude Code, Codex, and other [Agent Skills](https://agentskills.io/specification) runtimes. It discovers a project's SwiftUI sources and has the agent adapt the requested real component into a local fixture. Render macOS-compatible components as PNGs using a detached `NSHostingView`, compare images in an offline HTML gallery, or build an interactive native preview window. PNGs and galleries can be shown in the agent's file, image, or browser panel; the live preview is a separate macOS window. Optional framing in static renders is decorative.
 
+| Light, with the decorative frame | Dark, with the decorative frame |
+| --- | --- |
+| ![Light PNG render of the bundled example fixture](../../docs/images/swiftui-component-preview/render-light.png) | ![Dark PNG render of the bundled example fixture](../../docs/images/swiftui-component-preview/render-dark.png) |
+
+PNG renders of the bundled `assets/ExampleFixture.swift` at 480 × 320, produced by `scripts/render.sh` exactly as shown under [Try the example](#try-the-example).
+
 ## What to ask for
 
 Name the output to choose it: `png`, `gallery`, or `live`, as in `/swiftui-component-preview live SettingsView`. Without one the agent infers it from the request (looks → PNG, comparing themes → gallery, clicking through → live window), defaults to a PNG for a single component, and asks for a whole screen with no hint.

@@ -75,6 +75,7 @@ KVKAgentSkills/
 ├── tests/
 │   ├── run-all.sh
 │   └── <skill-name>/run.sh           # not installed with the skill
+├── docs/images/<skill-name>/          # README screenshots, not installed
 ├── templates/skill/                  # starting point for a new skill
 ├── tools/                            # new_skill.py, validate.py
 ├── CHANGELOG.md
