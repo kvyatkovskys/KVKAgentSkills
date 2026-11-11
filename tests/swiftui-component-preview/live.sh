@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-skill_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+skill_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../skills/swiftui-component-preview" && pwd -P)"
 test_dir="$(mktemp -d "${TMPDIR:-/tmp}/component-live-test.XXXXXX")"
 trap 'rm -rf "$test_dir"' EXIT
 mkdir "$test_dir/path with spaces"

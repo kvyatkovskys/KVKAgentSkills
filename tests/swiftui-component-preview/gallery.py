@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 import unittest
 
-SKILL = Path(__file__).resolve().parents[1]
+SKILL = (Path(__file__).resolve().parents[2] / 'skills' / 'swiftui-component-preview')
 
 
 class GalleryTests(unittest.TestCase):

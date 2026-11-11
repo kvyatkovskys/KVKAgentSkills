@@ -1,0 +1,32 @@
+{
+  "name": "kvk-agent-skills",
+  "owner": {
+    "name": "kvyatkovskys"
+  },
+  "metadata": {
+    "description": "KVKAgentSkills: reusable skills for coding agents, grouped into installable plugins."
+  },
+  "plugins": [
+    {
+      "name": "apple-dev",
+      "description": "Skills for Apple platform development: SwiftUI component previews as PNG renders, an HTML theme gallery, or a live native window.",
+      "version": "1.1.0",
+      "source": "./",
+      "strict": false,
+      "author": {
+        "name": "kvyatkovskys"
+      },
+      "homepage": "https://github.com/kvyatkovskys/KVKAgentSkills",
+      "license": "MIT",
+      "keywords": [
+        "swiftui",
+        "preview",
+        "macos",
+        "xcode"
+      ],
+      "skills": [
+        "./skills/swiftui-component-preview"
+      ]
+    }
+  ]
+}

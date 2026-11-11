@@ -11,9 +11,9 @@ import sys
 import tempfile
 import unittest
 
-BOOTSTRAP = runpy.run_path(str(Path(__file__).resolve().parents[1] / 'scripts' / 'bootstrap.py'))
+BOOTSTRAP = runpy.run_path(str((Path(__file__).resolve().parents[2] / 'skills' / 'swiftui-component-preview') / 'scripts' / 'bootstrap.py'))
 
-SCRIPT = Path(__file__).resolve().parents[1] / 'scripts' / 'bootstrap.py'
+SCRIPT = (Path(__file__).resolve().parents[2] / 'skills' / 'swiftui-component-preview') / 'scripts' / 'bootstrap.py'
 SOURCE = 'import SwiftUI\nstruct StatusCard: View { var body: some View { Text("Ready") } }\n#Preview { StatusCard() }\n'
 FIXTURE = 'import SwiftUI\nstruct StatusCard: View { var body: some View { Text("Ready") } }\n@MainActor enum PreviewFixture { static func makeView() -> some View { StatusCard() } }\n'
 
@@ -164,6 +164,43 @@ class BootstrapTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(captured.read_bytes().split(b'\0')[1].decode(), output)
         self.assertFalse(marker.exists())
+
+    def test_fixture_error_names_token_and_line(self):
+        fixture = self.root / 'Fixtures/Card.swift'
+        fixture.write_text(FIXTURE + '// Same inputs as the project #Preview.\n')
+        result = self.configure(ok=False)
+        self.assertIn('line 4', result.stderr)
+        self.assertIn('"#Preview"', result.stderr)
+        self.assertIn('comments', result.stderr)
+
+    def test_missing_configuration_message(self):
+        result = self.cli('run', '--mode', 'render', '--output', 'x.png', ok=False)
+        self.assertIn('configure first', result.stderr)
+
+    def test_separate_live_fixture(self):
+        live = self.root / 'Fixtures/CardLive.swift'
+        live.write_text(FIXTURE + '// stateful\n')
+        self.configure('--live-fixture', 'Fixtures/CardLive.swift')
+        config = json.loads((self.root / '.swiftui-preview/config.json').read_text())
+        self.assertEqual(config['live_fixture'], 'Fixtures/CardLive.swift')
+        self.assertEqual(BOOTSTRAP['command'](self.root, self.run_args(mode='live', output='New.app'))[2], str(live))
+        for mode, suffix in (('render', 'png'), ('gallery', 'html')):
+            self.assertEqual(BOOTSTRAP['command'](self.root, self.run_args(mode=mode, output='New.' + suffix))[2], str(self.root / 'Fixtures/Card.swift'))
+        live.write_text(FIXTURE + '// edited\n')
+        self.assertIn('readapt', self.cli('run', '--mode', 'live', '--output', 'New.app', ok=False).stderr)
+        live.write_text(FIXTURE + '#Preview { StatusCard() }\n')
+        self.assertIn('Live fixture line', self.configure('--live-fixture', 'Fixtures/CardLive.swift', '--replace', ok=False).stderr)
+        self.configure('--live-fixture', 'Fixtures/Card.swift', '--replace', ok=False)
+        # Configurations written before live fixtures existed keep working.
+        self.configure('--replace')
+        self.assertEqual(BOOTSTRAP['command'](self.root, self.run_args(mode='live', output='New.app'))[2], str(self.root / 'Fixtures/Card.swift'))
+
+    def test_fit_is_render_only(self):
+        self.configure()
+        argv = BOOTSTRAP['command'](self.root, self.run_args(width='fit', height=120))
+        self.assertEqual(argv[4:6], ['fit', '120'])
+        self.cli('run', '--mode', 'gallery', '--output', 'g.html', '--width', 'fit', ok=False)
+        self.cli('run', '--mode', 'live', '--output', 'New.app', '--height', 'fit', ok=False)
 
     def test_invalid_output_and_options(self):
         self.configure()

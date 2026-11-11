@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-skill_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+skill_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../skills/swiftui-component-preview" && pwd -P)"
 test_dir="$(mktemp -d "${TMPDIR:-/tmp}/component-preview-test.XXXXXX")"
 trap 'rm -rf "$test_dir"' EXIT
 mkdir -p "$test_dir/path with spaces"
@@ -74,4 +74,33 @@ fi
 bash "$renderer" "$fixture" "$test_dir/framed.png" 480 320 light en_US --frame
 check_png "$test_dir/framed.png" 528 408
 check_cleanup
-printf 'PASS: invalid input and compiler failures rejected; light, dark, spaced paths, framed dimensions, and temporary cleanup verified\n'
+bash "$renderer" "$fixture" "$test_dir/fit-height.png" 390 fit light en_US 2>"$test_dir/fit.log"
+grep -q '^render: fitted content size 390x[0-9]*$' "$test_dir/fit.log"
+fitted_height="$(sed -n 's/^render: fitted content size 390x//p' "$test_dir/fit.log")"
+check_png "$test_dir/fit-height.png" 390 "$fitted_height"
+bash "$renderer" "$fixture" "$test_dir/fit-both.png" fit fit dark en_US 2>"$test_dir/fit.log"
+fitted="$(sed -n 's/^render: fitted content size //p' "$test_dir/fit.log")"
+check_png "$test_dir/fit-both.png" "${fitted%x*}" "${fitted#*x}"
+(( ${fitted%x*} > 1 && ${fitted#*x} > 1 ))
+check_cleanup
+# Swift 5 mode accepts code that Swift 6 strict concurrency rejects.
+cat >"$test_dir/Legacy.swift" <<'SWIFT'
+import SwiftUI
+final class LegacyCounter { var value = 3 }
+let legacyCounter = LegacyCounter()
+@MainActor enum PreviewFixture {
+    static func makeView() -> some View { Text("Count \(legacyCounter.value)").padding() }
+}
+SWIFT
+if PREVIEW_SWIFT_VERSION=6 bash "$renderer" "$test_dir/Legacy.swift" "$test_dir/legacy6.png" 200 80 light en_US >"$test_dir/failure.log" 2>&1; then
+    printf 'Expected strict concurrency to reject the legacy fixture in Swift 6 mode\n' >&2
+    exit 1
+fi
+PREVIEW_SWIFT_VERSION=5 bash "$renderer" "$test_dir/Legacy.swift" "$test_dir/legacy5.png" 200 80 light en_US
+check_png "$test_dir/legacy5.png" 200 80
+if PREVIEW_SWIFT_VERSION=7 bash "$renderer" "$fixture" "$test_dir/invalid.png" 480 320 light en_US >"$test_dir/failure.log" 2>&1; then
+    printf 'Expected an invalid language mode to be rejected\n' >&2
+    exit 1
+fi
+check_cleanup
+printf 'PASS: invalid input and compiler failures rejected; light, dark, spaced paths, framed dimensions, fitted sizes, Swift 5/6 language modes, and temporary cleanup verified\n'

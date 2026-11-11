@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate skills, catalog and marketplace
+        run: python3 tools/validate.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Skills CLI discovers every skill
+        run: |
+          listing="$(npx --yes skills add . --list)"
+          printf '%s\n' "$listing"
+          for directory in skills/*/; do
+            grep -q "$(basename "$directory")" <<<"$listing"
+          done
+
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run every skill's tests
+        run: bash tests/run-all.sh
