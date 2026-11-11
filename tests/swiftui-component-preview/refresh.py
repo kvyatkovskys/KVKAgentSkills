@@ -33,7 +33,7 @@ def main():
         app = root / 'Counter Preview.app'
         refresh = ('refresh', '--output', 'Counter Preview.app', '--width', '520', '--height', '200', '--no-launch')
         assert cli(root, *refresh).returncode != 0, 'refresh must require configuration'
-        assert cli(root, 'configure', '--project', 'Package.swift', '--source', 'Counter.swift', '--fixture', 'Fixture.swift', '--component', 'Counter').returncode == 0
+        assert cli(root, 'configure', '--project', 'Package.swift', '--source', 'Counter.swift', '--fixture', 'Fixture.swift', '--component', 'Counter', '--platform', 'macos').returncode == 0
         first = cli(root, *refresh)
         assert first.returncode == 0, first.stderr
         assert json.loads(first.stdout) ["launched"] is False

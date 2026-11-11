@@ -6,6 +6,13 @@ usage() {
 }
 fail() { printf 'render: %s\n' "$1" >&2; exit 2; }
 
+# PREVIEW_PLATFORM=ios hands the same arguments to the iOS Simulator helper.
+platform="${PREVIEW_PLATFORM:-macos}"
+[[ "$platform" == macos || "$platform" == ios ]] || fail 'PREVIEW_PLATFORM must be macos or ios.'
+if [[ "$platform" == ios ]]; then
+    exec /bin/bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/ios-render.sh" "$@"
+fi
+
 if [[ $# -ne 6 && $# -ne 7 ]]; then usage; exit 2; fi
 fixture="$1"
 output="$2"

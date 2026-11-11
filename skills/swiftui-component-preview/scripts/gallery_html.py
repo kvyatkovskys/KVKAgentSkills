@@ -22,6 +22,7 @@ variants['light-framed'].src = image.getAttribute('src');
 const frame = document.getElementById('frame');
 const status = document.getElementById('status');
 const pixels = document.getElementById('pixels');
+const scale = Number(image.dataset.scale);
 function updatePreview() {
   const theme = document.querySelector('input[name="theme"]:checked').value;
   const framed = frame.checked;
@@ -31,7 +32,7 @@ function updatePreview() {
   image.height = variant.height;
   image.alt = image.dataset.title + ': ' + theme + ' SwiftUI component render' + (framed ? ' with decorative frame' : ' without frame');
   document.documentElement.dataset.theme = theme;
-  pixels.textContent = variant.width + ' × ' + variant.height + ' px';
+  pixels.textContent = variant.width * scale + ' × ' + variant.height * scale + ' px';
   status.textContent = (theme === 'light' ? 'Light' : 'Dark') + ' appearance · ' + (framed ? 'Decorative frame' : 'No frame');
 }
 document.getElementById('controls').addEventListener('change', updatePreview);
@@ -73,7 +74,9 @@ def payload(png, cwebp):
 def main():
     for signum in (signal.SIGINT, signal.SIGHUP, signal.SIGTERM):
         signal.signal(signum, stop)
-    directory, destination, width, height, locale, title, fixture = sys.argv[1:]
+    directory, destination, width, height, locale, title, fixture = sys.argv[1:8]
+    # Optional pixels per point; the image is displayed at its size in points.
+    scale = int(sys.argv[8]) if len(sys.argv) > 8 else 1
     width, height = int(width), int(height)
     cwebp = None if os.environ.get("PREVIEW_GALLERY_WEBP") == "0" else shutil.which("cwebp")
     variants = {}
@@ -115,11 +118,11 @@ def main():
 <label class="frame-label"><input id="frame" type="checkbox" checked>Decorative frame</label>
 </form>
 <figure><div class="stage">
-<img id="preview" data-title="{safe_title}" src="{initial['src']}" width="{initial['width']}" height="{initial['height']}" alt="{safe_title}: light SwiftUI component render with decorative frame">
-</div><figcaption><span id="status" role="status" aria-live="polite">Light appearance · Decorative frame</span><span id="pixels">{initial['width']} × {initial['height']} px</span></figcaption></figure>
+<img id="preview" data-title="{safe_title}" data-scale="{scale}" src="{initial['src']}" width="{initial['width']}" height="{initial['height']}" alt="{safe_title}: light SwiftUI component render with decorative frame">
+</div><figcaption><span id="status" role="status" aria-live="polite">Light appearance · Decorative frame</span><span id="pixels">{initial['width'] * scale} × {initial['height'] * scale} px</span></figcaption></figure>
 <noscript><p>Enable JavaScript to switch between the embedded appearance and frame variants.</p></noscript>
 </section>
-<p class="details"><span>Viewport {width} × {height} pt</span><span>1× render</span><span>Locale {escape(locale)}</span></p>
+<p class="details"><span>Viewport {width} × {height} pt</span><span>{scale}× render</span><span>Locale {escape(locale)}</span></p>
 <p class="note">Static SwiftUI render. Controls inside the image are not interactive. The frame is decorative.</p>
 </main>
 <script id="variants" type="application/json">{json.dumps(variant_data, separators=(',', ':'))}</script>

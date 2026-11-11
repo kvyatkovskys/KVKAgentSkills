@@ -6,7 +6,7 @@ A growing collection of reusable skills for coding agents. Each skill is self-co
 
 | Skill | Purpose | Requirements | Claude Code plugin |
 | --- | --- | --- | --- |
-| [swiftui-component-preview](skills/swiftui-component-preview) | Preview a SwiftUI component as PNG renders, an HTML theme gallery, or a live native window, from a fixture adapted from the real component. | macOS 14+, Xcode 15+, Python 3.8+ | `apple-dev` |
+| [swiftui-component-preview](skills/swiftui-component-preview) | Preview a SwiftUI component for macOS, iOS, or iPadOS as PNG renders, an HTML theme gallery, or a live preview (native window or iOS Simulator), from a fixture adapted from the real component. | macOS 14+, Xcode 15+, Python 3.8+; iOS previews need an iOS 17+ simulator | `apple-dev` |
 
 Each skill's own README covers usage, requirements, limits, and side effects. Installing a skill does not install its toolchain.
 
@@ -76,7 +76,7 @@ Skills here use only the open Agent Skills format, so any agent that loads `SKIL
 
 Agent-specific extras are optional and ignored elsewhere: `argument-hint` in the frontmatter and `.claude-plugin/marketplace.json` are for Claude Code, `agents/openai.yaml` is for Codex.
 
-For `swiftui-component-preview` specifically: every output needs a local macOS shell with Xcode. Without image input the agent can still produce PNGs and the gallery but cannot inspect them itself. The live window needs a GUI session, so it does not work over SSH or in a sandbox that blocks launching apps.
+For `swiftui-component-preview` specifically: every output needs a local macOS shell with Xcode. Without image input the agent can still produce PNGs and the gallery but cannot inspect them itself. The live window needs a GUI session, so it does not work over SSH or in a sandbox that blocks launching apps. iOS and iPadOS outputs also need a full Xcode with an iOS Simulator runtime and permission to run `simctl`.
 
 ## Repository layout
 

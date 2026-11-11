@@ -72,7 +72,47 @@ class BootstrapTests(unittest.TestCase):
     def test_xcode_without_swiftpm(self):
         (self.root / 'Package.swift').unlink()
         (self.root / 'Desktop.xcodeproj').mkdir()
-        self.cli('init', '--project', 'Desktop.xcodeproj', '--source', 'StatusCard.swift', '--fixture', 'Fixtures/Card.swift', '--component', 'StatusCard')
+        arguments = ('init', '--project', 'Desktop.xcodeproj', '--source', 'StatusCard.swift', '--fixture', 'Fixtures/Card.swift', '--component', 'StatusCard')
+        # An empty project declares no platform: the agent must ask and pass the answer.
+        result = self.cli(*arguments, ok=False)
+        self.assertIn('Ask the user', result.stderr)
+        self.assertFalse((self.root / '.swiftui-preview').exists())
+        self.assertEqual(json.loads(self.cli(*arguments, '--platform', 'macos').stdout)['platform_source'], 'explicit')
+
+    def project(self, name, settings):
+        (self.root / name).mkdir()
+        (self.root / name / 'project.pbxproj').write_text(settings)
+        return ('configure', '--project', name, '--source', 'StatusCard.swift', '--fixture', 'Fixtures/Card.swift', '--component', 'StatusCard', '--replace')
+
+    def test_platform_is_resolved_from_project_and_source(self):
+        phone = self.project('Phone.xcodeproj', 'SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";')
+        desktop = self.project('Desktop.xcodeproj', 'SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 14.0;')
+        shared = self.project('Shared.xcodeproj', 'SDKROOT = auto; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";')
+        for arguments, platform in ((phone, 'ios'), (desktop, 'macos')):
+            result = json.loads(self.cli(*arguments).stdout)
+            self.assertEqual((result['platform'], result['platform_source']), (platform, 'project'))
+        self.assertEqual(json.loads(self.configure('--replace').stdout)['platform'], 'macos')
+        result = self.cli(*shared, ok=False)
+        self.assertIn('both iOS and macOS', result.stderr)
+        self.assertIn('--platform ios or --platform macos', result.stderr)
+        self.assertEqual(json.loads(self.cli(*shared, '--platform', 'ios').stdout)['platform_source'], 'explicit')
+        # A framework import in the component decides before the project does.
+        (self.root / 'StatusCard.swift').write_text('import UIKit\n' + SOURCE)
+        result = json.loads(self.cli(*shared).stdout)
+        self.assertEqual((result['platform'], result['platform_source']), ('ios', 'source'))
+        (self.root / 'StatusCard.swift').write_text('import AppKit\n' + SOURCE)
+        self.assertEqual(json.loads(self.cli(*phone).stdout)['platform'], 'macos')
+        # Conditionals mark shared code and decide nothing.
+        (self.root / 'StatusCard.swift').write_text('#if os(iOS)\n#endif\n' + SOURCE)
+        self.assertEqual(json.loads(self.cli(*desktop).stdout)['platform'], 'macos')
+        # A workspace is read through the projects it lists.
+        (self.root / 'App.xcworkspace').mkdir()
+        (self.root / 'App.xcworkspace/contents.xcworkspacedata').write_text('<Workspace><FileRef location = "group:Phone.xcodeproj"></FileRef><FileRef location = "group:../Outside.xcodeproj"></FileRef></Workspace>')
+        result = json.loads(self.cli('configure', '--project', 'App.xcworkspace', '--source', 'StatusCard.swift', '--fixture', 'Fixtures/Card.swift', '--component', 'StatusCard', '--replace').stdout)
+        self.assertEqual(result['platform'], 'ios')
+        discovered = json.loads(self.cli('discover').stdout)
+        suggested = {item['path']: item['suggested_platform'] for item in discovered['projects']}
+        self.assertEqual(suggested, {'App.xcworkspace': 'ios', 'Desktop.xcodeproj': 'macos', 'Package.swift': 'macos', 'Phone.xcodeproj': 'ios', 'Shared.xcodeproj': 'both'})
 
     def test_traversal_absolute_and_missing_paths(self):
         for value in ('../StatusCard.swift', str(self.root / 'StatusCard.swift'), './StatusCard.swift', 'Absent.swift', 'Fixtures'):
@@ -131,7 +171,7 @@ class BootstrapTests(unittest.TestCase):
         self.configure()
         path = self.root / '.swiftui-preview/config.json'
         original = json.loads(path.read_text())
-        bad = [None, [], {}, {'schema_version': 999}, dict(original, schema_version=True), dict(original, source=5), dict(original, provenance={}), dict(original, platform='ios')]
+        bad = [None, [], {}, {'schema_version': 999}, dict(original, schema_version=True), dict(original, source=5), dict(original, provenance={}), dict(original, platform='tvos')]
         for value in bad:
             path.write_text(json.dumps(value))
             self.cli('run', '--mode', 'render', '--output', 'x.png', ok=False)
@@ -201,6 +241,46 @@ class BootstrapTests(unittest.TestCase):
         self.assertEqual(argv[4:6], ['fit', '120'])
         self.cli('run', '--mode', 'gallery', '--output', 'g.html', '--width', 'fit', ok=False)
         self.cli('run', '--mode', 'live', '--output', 'New.app', '--height', 'fit', ok=False)
+
+    def test_ios_platform_options(self):
+        fixture = self.root / 'Fixtures/Card.swift'
+        fixture.write_text(FIXTURE + 'import UIKit\n')
+        # UIKit is rejected for the macOS host and accepted for the simulator host.
+        self.assertIn('--platform ios', self.configure(ok=False).stderr)
+        result = json.loads(self.configure('--platform', 'ios').stdout)
+        self.assertEqual(result['platform'], 'ios')
+        self.assertEqual(json.loads((self.root / '.swiftui-preview/config.json').read_text())['platform'], 'ios')
+        fixture.write_text(FIXTURE + '@main struct App {}\n')
+        self.configure('--platform', 'ios', '--replace', ok=False)
+        fixture.write_text(FIXTURE + 'import UIKit\n')
+        argv = BOOTSTRAP['command'](self.root, self.run_args(width='screen', height='screen'))
+        self.assertEqual(argv[4:6], ['screen', 'screen'])
+        self.assertEqual(BOOTSTRAP['command'](self.root, self.run_args(mode='gallery', output='g.html', width='screen', height='screen'))[4:6], ['screen', 'screen'])
+        environment = BOOTSTRAP['helper_env'](argparse.Namespace(swift_version='5', device='iPad (A16)', scale=3), 'ios')
+        self.assertEqual([environment[key] for key in ('PREVIEW_PLATFORM', 'PREVIEW_SWIFT_VERSION', 'PREVIEW_IOS_DEVICE', 'PREVIEW_IOS_SCALE')], ['ios', '5', 'iPad (A16)', '3'])
+        for extra in (['--width', 'screen'], ['--width', 'screen', '--height', '300'], ['--device', 'iPhone; touch x'], ['--scale', '4']):
+            self.cli('run', '--mode', 'render', '--output', 'new.png', *extra, ok=False)
+        self.cli('run', '--mode', 'live', '--output', 'New.app', '--width', 'screen', '--height', 'screen', ok=False)
+        self.cli('run', '--mode', 'live', '--output', 'New.app', '--scale', '2', ok=False)
+        self.cli('refresh', '--output', 'New.app', '--width', 'screen', '--height', 'screen', ok=False)
+
+    def test_catalyst_live_host(self):
+        self.configure('--platform', 'ios')
+        environment = BOOTSTRAP['helper_env'](argparse.Namespace(swift_version=None, device=None, live_host='catalyst'), 'ios')
+        self.assertEqual(environment['PREVIEW_IOS_LIVE_HOST'], 'catalyst')
+        self.assertNotIn('PREVIEW_IOS_DEVICE', environment)
+        self.cli('run', '--mode', 'render', '--output', 'new.png', '--live-host', 'catalyst', ok=False)
+        self.cli('run', '--mode', 'live', '--output', 'New.app', '--live-host', 'window', ok=False)
+        result = self.cli('run', '--mode', 'live', '--output', 'New.app', '--live-host', 'catalyst', '--device', 'iPhone 17', ok=False)
+        self.assertIn('Mac window', result.stderr)
+
+    def test_simulator_options_need_ios_platform(self):
+        self.configure()
+        self.assertIn('platform ios', self.cli('run', '--mode', 'live', '--output', 'New.app', '--live-host', 'catalyst', ok=False).stderr)
+        for extra in (['--device', 'iPhone 17'], ['--scale', '2'], ['--width', 'screen', '--height', 'screen']):
+            result = self.cli('run', '--mode', 'render', '--output', 'new.png', *extra, ok=False)
+            self.assertIn('platform ios', result.stderr)
+        self.assertIn('platform ios', self.cli('refresh', '--output', 'New.app', '--device', 'iPhone 17', ok=False).stderr)
 
     def test_invalid_output_and_options(self):
         self.configure()

@@ -14,4 +14,6 @@ Arguments are fixture, output HTML, content width, content height, locale, and o
 
 The file embeds all four renders and has no external assets or requests. When `cwebp` is on `PATH`, each render is embedded as lossless WebP if that is smaller than its PNG, which typically shrinks a large gallery about 2.5 times with identical pixels; otherwise, or with `PREVIEW_GALLERY_WEBP=0`, the PNGs are embedded. `cwebp` is optional (`brew install webp`); never install it without the user's consent. Its native radio buttons and checkbox switch the rendered image, caption and pixel dimensions; the viewport stays fixed. The component itself remains a static render, including its controls. Inspect at least one image and exercise the gallery controls in an available browser before reporting interaction as verified.
 
-The gallery needs numeric dimensions. For a component whose size is unknown, render one PNG with `fit` first and reuse the reported size.
+On platform `ios` (`run --mode gallery`, or `PREVIEW_PLATFORM=ios` for the direct helper) the four renders come from one simulator launch, `screen screen` is accepted for a whole device screen, and the page shows images at their size in points while reporting the pixel size at the render scale; see [ios.md](ios.md).
+
+The gallery needs numeric dimensions (or `screen` on iOS). For a component whose size is unknown, render one PNG with `fit` first and reuse the reported size.

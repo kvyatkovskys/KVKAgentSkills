@@ -51,9 +51,9 @@ private struct LiveExample: View {
                     case .profile:
                         ProfileScreen(profile: $profile, back: { path.removeLast() }) { path.append(.success) }
                     case .success:
-                        SuccessScreen(profile: profile, back: { path.removeLast() }) { path.removeAll() }
+                        SuccessScreen(profile: $profile, back: { path.removeLast() }) { path.removeAll() }
                     case .details:
-                        DetailsScreen(profile: profile) { path.removeLast() }
+                        DetailsScreen(profile: $profile) { path.removeLast() }
                     }
                 }
         }
@@ -192,7 +192,7 @@ private struct PreferencesSheet: View {
 }
 
 private struct SuccessScreen: View {
-    let profile: Profile
+    @Binding var profile: Profile
     let back: () -> Void
     let startOver: () -> Void
     @State private var confirmStartOver = false
@@ -225,7 +225,7 @@ private struct SuccessScreen: View {
 }
 
 private struct DetailsScreen: View {
-    let profile: Profile
+    @Binding var profile: Profile
     let back: () -> Void
 
     var body: some View {

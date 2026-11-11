@@ -1,15 +1,15 @@
 ---
 name: swiftui-component-preview
-description: Use when the user wants to see, preview, render, or screenshot a SwiftUI view or component without opening Xcode Canvas - checking layout, light/dark appearance, locale, fixture states, or local interaction of a macOS-compatible SwiftUI component. Produces PNG renders, an offline HTML theme gallery, or an interactive native macOS window from a fixture adapted from the project's real component.
+description: Use when the user wants to see, preview, render, or screenshot a SwiftUI view or component without opening Xcode Canvas - checking layout, light/dark appearance, locale, fixture states, or local interaction of a SwiftUI component for macOS, iOS, or iPadOS. Produces PNG renders, an offline HTML theme gallery, or an interactive preview (a native macOS window, or an app in the iOS Simulator for iPhone and iPad) from a fixture adapted from the project's real component.
 argument-hint: "[png|gallery|live] <component>"
 license: MIT
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # SwiftUI Component Preview
 
-Create a component render from a small, deterministic SwiftUI fixture. Requires macOS 14 or later and Xcode 15 or later (Swift 5.9+); Swift 6 is not required. Project onboarding, the HTML gallery, and live builder also require Python 3.8 or later (standard library only). Choose PNGs for static inspection, the gallery for image comparisons, or a native window for real fixture interactions. These helpers do not provide Xcode Canvas or hot reload.
+Create a component render from a small, deterministic SwiftUI fixture. Requires macOS 14 or later and Xcode 15 or later (Swift 5.9+); Swift 6 is not required. Components can be rendered natively for macOS or, with `--platform ios`, inside an iOS Simulator for iPhone and iPad, which also needs an iOS 17 or later simulator runtime; read [references/ios.md](references/ios.md) before any iOS or iPadOS output. Project onboarding, the HTML gallery, and live builder also require Python 3.8 or later (standard library only). Choose PNGs for static inspection, the gallery for image comparisons, or a native window for real fixture interactions. These helpers do not provide Xcode Canvas or hot reload.
 
 ## Choose the output
 
@@ -38,13 +38,13 @@ Rules 1, 2, and 4 proceed without asking. When several outputs are requested, pr
 python3 "<skill-directory>/scripts/bootstrap.py" discover --root "<project-root>"
 ```
 
-Discovery reports SwiftPM manifests, Xcode projects/workspaces, SwiftUI sources, `#Preview` presence, and textual platform evidence. It never evaluates manifests, runs plugins, builds, or modifies the project. Nested dependency/build directories and symlinks are skipped. Missing platform metadata means unknown, not unsupported. Use the request and discovered paths to choose the intended project and component. Ask only for selection that remains genuinely ambiguous; multiple markers alone need not force a question when the requested source is clear.
+Discovery reports SwiftPM manifests, Xcode projects/workspaces, SwiftUI sources, `#Preview` presence, textual platform evidence, and a `suggested_platform` (`ios`, `macos`, `both`, or `unknown`) for each project and source. It never evaluates manifests, runs plugins, builds, or modifies the project. Nested dependency/build directories and symlinks are skipped. Missing platform metadata means unknown, not unsupported. Use the request and discovered paths to choose the intended project and component. Ask only for selection that remains genuinely ambiguous; multiple markers alone need not force a question when the requested source is clear.
 
 Read the chosen **actual source**, its existing `#Preview` construction, and necessary local definitions before creating a fixture. The skill agent performs this adaptation as part of the first preview request; do not stop at instructions telling the user to adapt it manually when you can do so safely. Keep the component's real view hierarchy, controls, styles, and inputs. Extract its value view and include required local definitions, replacing service dependencies with synthetic values and local actions. Do not substitute a lookalike screen, generic demo, or the bundled example for the requested component. The examples illustrate the fixture API only.
 
-Save the adapted fixture inside the user's project, for example `.swiftui-preview/fixtures/StatusCard.swift`. Never copy project source into the shared installed skill. Include no `@main`, app delegate, production composition root, `#Preview` macro, or production services. `configure`, `run`, and `refresh` scan the fixture as text and reject it when `@main`, `#Preview`, or `import UIKit` appears anywhere, comments included; keep those strings out of comments too. The error names the matched token and its line. Inspect the whole fixture before executing it: executable Swift runs with normal caller permissions; this helper is not a sandbox. Configuration hashes cannot establish visual fidelity or absence of side effects.
+Save the adapted fixture inside the user's project, for example `.swiftui-preview/fixtures/StatusCard.swift`. Never copy project source into the shared installed skill. Include no `@main`, app delegate, production composition root, `#Preview` macro, or production services. `configure`, `run`, and `refresh` scan the fixture as text and reject it when `@main`, `#Preview`, or, on platform `macos`, `import UIKit` appears anywhere, comments included; keep those strings out of comments too. The error names the matched token and its line. Inspect the whole fixture before executing it: executable Swift runs with normal caller permissions; this helper is not a sandbox. Configuration hashes cannot establish visual fidelity or absence of side effects.
 
-If explicit UIKit or iOS-only APIs make the component incompatible with macOS, use an available iOS Simulator/Xcode Canvas workflow or report the precise unsupported dependency. The generic macOS host does not run UIKit. If modules, assets, or String Catalogs cannot be safely adapted into the single-file contract, use an available project-specific workflow or state the concrete limitation. Do not silently link the production app, execute its lifecycle, or change its build configuration.
+**Platform.** Decide it in this order and stop at the first that answers. (1) The user named one: "on iPhone", "iPad", "the Mac app" mean `--platform ios` or `--platform macos`. (2) Otherwise leave `--platform` out: `configure` reads the component's own `import UIKit` or `import AppKit`, then the selected project's settings, and reports the result with `platform_source`. (3) When the project targets both platforms or declares none, `configure` stops with an error instead of guessing: ask the user one question, iOS/iPadOS or macOS, and pass the answer. Never pick a platform silently for a multiplatform project. The choice is saved with the configuration, so it is asked once; say which platform was chosen and why. The `macos` host does not run UIKit and draws macOS controls. [references/ios.md](references/ios.md) covers devices and sizes. If modules, assets, or String Catalogs cannot be safely adapted into the single-file contract, use an available project-specific workflow or state the concrete limitation. Do not silently link the production app, execute its lifecycle, or change its build configuration.
 
 After preparing and reviewing the genuine fixture, save the selected paths (relative to the project root):
 
@@ -54,7 +54,7 @@ python3 "<skill-directory>/scripts/bootstrap.py" configure --root "<project-root
   --fixture ".swiftui-preview/fixtures/StatusCard.swift" --component StatusCard
 ```
 
-`--project` also accepts a relative `.xcodeproj` or `.xcworkspace` directory; `init` aliases `configure`. Add `--live-fixture "<relative path>"` to register a separate stateful fixture for live builds (see [references/live.md](references/live.md)). The versioned `.swiftui-preview/config.json` stores only relative paths, component name, platform `macos`, and SHA-256 hashes of the selected source and adapted fixture. It relocates with the project and may be committed by the user; perform no Git actions unless requested. Existing configuration is preserved unless explicitly replaced with `configure --replace` after inspection and adaptation. Selected paths and configuration must exist within the root, without symlinks or path traversal.
+`--project` also accepts a relative `.xcodeproj` or `.xcworkspace` directory; `init` aliases `configure`. Add `--live-fixture "<relative path>"` to register a separate stateful fixture for live builds (see [references/live.md](references/live.md)). The versioned `.swiftui-preview/config.json` stores only relative paths, component name, platform (`macos` or `ios`), and SHA-256 hashes of the selected source and adapted fixture. It relocates with the project and may be committed by the user; perform no Git actions unless requested. Existing configuration is preserved unless explicitly replaced with `configure --replace` after inspection and adaptation. Selected paths and configuration must exist within the root, without symlinks or path traversal.
 
 After `configure` succeeds, produce the first preview with `run` as described next. The direct helpers in later sections are for one-off fixtures that have no saved configuration.
 
@@ -93,7 +93,7 @@ Use synthetic data and fixed initial state. Use inert actions for static renders
 
 When the project already has `#Preview` fixtures, reuse their view construction and inputs. Do not compile the `#Preview` macro or an `@main App` in this standalone fixture. Do not rewrite project configuration just to render a component.
 
-The same fixture contract works across projects for SwiftUI components that compile for macOS. UIKit-only components require an iOS simulator workflow. The helpers do not automatically link arbitrary project modules or compile/copy assets and String Catalogs. Extract a self-contained value view where practical. If the component needs project modules or bundles, explain that this standalone command needs an explicitly adapted build; do not claim locale injection supplies missing translations or resources.
+The same fixture contract works across projects and on both platforms; UIKit is available only with `--platform ios`. The helpers do not automatically link arbitrary project modules or compile/copy assets and String Catalogs. Extract a self-contained value view where practical. If the component needs project modules or bundles, explain that this standalone command needs an explicitly adapted build; do not claim locale injection supplies missing translations or resources.
 
 ## Render and inspect
 
@@ -118,6 +118,7 @@ Inspect the generated image with the available local-image viewer before reporti
 Two further outputs use the same fixture contract. Read the linked reference in full before producing either; each has rules on output paths, launching, and what counts as verified.
 
 - **HTML theme gallery**, when the user wants to compare light/dark or toggle the decorative frame: `run --mode gallery`, or `scripts/gallery.sh` directly. See [references/gallery.md](references/gallery.md).
+- **iOS and iPadOS**, for any of the three outputs on platform `ios`: device selection, `screen` sizes, scale, launching in the simulator, and `--live-host catalyst` for a live preview in an ordinary Mac window with a control bar. See [references/ios.md](references/ios.md).
 - **Live native window**, for real buttons, text input, focus, and navigation: `run --mode live`, or `scripts/live.sh` directly. It builds an `.app` and does not launch it. A static fixture with inert actions shows nothing when clicked; [references/live.md](references/live.md) explains when to add a separate stateful fixture with `configure --live-fixture`. An open window never picks up code changes: after updating the fixture, `refresh` rebuilds the app at the same path, closes the old window, and reopens it (same reference).
 
 ## Present the result
@@ -139,4 +140,4 @@ Inspect every artifact yourself before showing it, then present it with whatever
 
 Label the artifact a component render, name its appearance/locale/viewport, and identify the frame as decorative when used. Detached rendering is useful for static layout and styles; it does not validate focus, accessibility behavior, interaction, animations, window-dependent materials, or asynchronous lifecycle state. OS and toolchain versions can change native control appearance.
 
-Every output is a macOS rendering. When discovery shows iOS platform evidence for the project or source, tell the user that controls, fonts, and metrics follow macOS conventions and differ on iOS (a `.destructive` button is not tinted red, lists and navigation chrome look different), and that device fidelity needs a Simulator or Xcode Canvas.
+Name the platform of every output, and for iOS the simulator device. A `macos` output of a component that targets iOS follows macOS conventions for controls, fonts, and metrics (a `.destructive` button is not tinted red, lists and navigation chrome look different): say so and offer `--platform ios`. An `ios` output comes from a simulator, not a physical device.
